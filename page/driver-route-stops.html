@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lộ Trình Điểm Dừng - ParcelPulse Tài Xế</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-container">
+      <a href="../index.html" class="brand-logo">🚚</a>
+      <div class="brand-title">
+        ParcelPulse
+        <span>Nhân Viên Giao Hàng</span>
+      </div>
+    </div>
+
+    <button class="menu-toggle">☰</button>
+
+    <ul class="nav-links">
+      <li><a href="driver-route-stops.html" class="nav-link active">📋 Danh Sách Điểm Dừng</a></li>
+      <li><a href="driver-stop-detail.html" class="nav-link">📦 Chi Tiết Điểm Dừng</a></li>
+      <li><a href="driver-exception-create.html" class="nav-link">⚠️ Báo Cáo Ngoại Lệ</a></li>
+      <li><a href="../index.html" class="nav-link">🔄 Đổi Vai Trò</a></li>
+    </ul>
+
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" onclick="toggleTheme()">🌓</button>
+      <div class="user-profile-badge" id="header-user-badge"></div>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">🚚 Lộ Trình Giao Hàng Hôm Nay: Tuyến ROUTE-HN-04</h1>
+        <p class="page-subtitle">Khu vực Cầu Giấy & Nam Từ Liêm • Xe máy Wave 29B1-888.99</p>
+      </div>
+      <button class="btn btn-accent" onclick="runRouteOptimizationAI()">
+        ✨ AI Tối Ưu Thứ Tự Điểm Dừng
+      </button>
+    </div>
+
+    <!-- Stats & Progress -->
+    <div class="grid-cols-4">
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" id="stat-total">5</div>
+          <div class="stat-label">Tổng Điểm Dừng</div>
+        </div>
+        <div class="stat-icon primary">📦</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" id="stat-completed" style="color: var(--success);">1</div>
+          <div class="stat-label">Đã Giao Thành Công</div>
+        </div>
+        <div class="stat-icon success">✅</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" id="stat-pending" style="color: var(--warning);">2</div>
+          <div class="stat-label">Đang Chờ Giao</div>
+        </div>
+        <div class="stat-icon purple">⏳</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" id="stat-exception" style="color: var(--danger);">2</div>
+          <div class="stat-label">Gặp Ngoại Lệ</div>
+        </div>
+        <div class="stat-icon danger">⚠️</div>
+      </div>
+    </div>
+
+    <!-- AI Route Optimizer Panel (AI-3 Next Best Action) -->
+    <div class="ai-container" id="ai-route-panel" style="display: none;">
+      <div class="ai-header">
+        <span class="ai-badge">
+          <span class="sparkle">✨</span> AI-3: Next Best Action (Tối Ưu Tuyến Đường)
+        </span>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('ai-route-panel').style.display = 'none'">Đóng</button>
+      </div>
+
+      <div id="ai-route-loading" class="ai-processing" style="display: none;">
+        <div class="ai-spinner"></div>
+        <p style="font-weight: 600;">Thuật toán di truyền đang tính toán thứ tự điểm dừng tránh các điểm ùn tắc...</p>
+      </div>
+
+      <div id="ai-route-result" class="ai-result-box">
+        <h3 style="color: var(--success); font-weight: 800; font-size: 1.15rem; margin-bottom: 0.5rem;">
+          🎯 Đề Xuất Lộ Trình Tiết Kiệm 25 Phút Di Chuyển
+        </h3>
+        <div class="ai-explanation">
+          <strong>Lý do điều chỉnh thứ tự:</strong>
+          <p style="margin-top: 0.25rem;">
+            Đường Duy Tân đang bị nghẽn giao thông do sự cố va chạm. Đề xuất gom 2 đơn tại tòa nhà Keangnam (#1 và #5) để giao cùng lúc trong khung giờ 14:00 - 15:00, sau đó mới di chuyển qua Dolphin Plaza.
+          </p>
+        </div>
+        <div class="ai-actions">
+          <button class="btn btn-success btn-sm" onclick="applyOptimizedRoute()">✅ Áp Dụng Lộ Trình Mới</button>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('ai-route-panel').style.display = 'none'">Giữ Nguyên Thứ Tự Cũ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="filter-buttons">
+          <button class="btn btn-primary btn-sm" data-filter="all" onclick="filterStops('all', this)">Tất Cả (5)</button>
+          <button class="btn btn-outline btn-sm" data-filter="pending" onclick="filterStops('pending', this)">Đang Chờ Giao</button>
+          <button class="btn btn-outline btn-sm" data-filter="completed" onclick="filterStops('completed', this)">Đã Giao</button>
+          <button class="btn btn-outline btn-sm" data-filter="exception" onclick="filterStops('exception', this)">Có Ngoại Lệ</button>
+        </div>
+
+        <div class="search-wrapper" style="min-width: 250px;">
+          <span class="search-icon">🔎</span>
+          <input type="text" id="stop-search" class="form-control" placeholder="Tìm người nhận, địa chỉ..." oninput="searchStops(this.value)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Stops List (R) -->
+    <div id="stops-container" style="display: flex; flex-direction: column; gap: 1rem;">
+      <!-- Rendered by JS -->
+    </div>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>ParcelPulse - CSE122 Quản lý danh sách điểm dừng & Lộ trình tài xế</p>
+  </footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    let activeFilter = "all";
+    let currentStops = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      currentStops = window.PP_DATA.getStops();
+      renderStops();
+    });
+
+    function renderStops() {
+      const container = document.getElementById("stops-container");
+      let list = currentStops;
+
+      if (activeFilter !== "all") {
+        list = list.filter(s => s.status === activeFilter);
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="card state-empty">
+            <div class="state-empty-icon">📍</div>
+            <h3>Không Có Điểm Dừng Phù Hợp</h3>
+            <p>Không tìm thấy điểm dừng nào khớp với bộ lọc hiện tại.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = list.map(stop => {
+        let statusBadge = "";
+        if (stop.status === "completed") {
+          statusBadge = `<span class="badge badge-delivered">Đã giao thành công</span>`;
+        } else if (stop.status === "exception") {
+          statusBadge = `<span class="badge badge-exception">Có ngoại lệ</span>`;
+        } else {
+          statusBadge = `<span class="badge badge-out_for_delivery">Đang chờ giao</span>`;
+        }
+
+        return `
+          <div class="card" style="padding: 1.25rem 1.5rem; transition: var(--transition);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+              
+              <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                <div style="width: 44px; height: 44px; border-radius: var(--radius-md); background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem;">
+                  #${stop.sequence}
+                </div>
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem;">
+                    <h3 style="font-size: 1.1rem; font-weight: 700;">${stop.recipientName}</h3>
+                    <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">📞 ${stop.recipientPhone}</span>
+                    ${statusBadge}
+                  </div>
+                  <p style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.35rem;">
+                    📍 <strong>Địa chỉ:</strong> ${stop.address}
+                  </p>
+                  <div style="display: flex; gap: 1.5rem; font-size: 0.8rem; color: var(--text-muted);">
+                    <span>📦 Mã: <strong>${stop.parcelId}</strong></span>
+                    <span>⏰ Khung giờ: <strong>${stop.timeWindow}</strong></span>
+                    <span>💵 COD: <strong style="color: var(--accent);">${formatVND(stop.codAmount)}</strong></span>
+                  </div>
+                  ${stop.notes ? `
+                    <div style="margin-top: 0.5rem; font-size: 0.8rem; background: var(--bg-subtle); padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); border-left: 3px solid var(--accent);">
+                      💬 Ghi chú: ${stop.notes}
+                    </div>
+                  ` : ""}
+                </div>
+              </div>
+
+              <!-- Action buttons -->
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <a href="driver-stop-detail.html?stopId=${stop.id}&parcelId=${stop.parcelId}" class="btn btn-outline btn-sm">
+                  🔍 Xem Chi Tiết
+                </a>
+                ${stop.status !== "completed" ? `
+                  <a href="driver-exception-create.html?parcelId=${stop.parcelId}" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.4);">
+                    ⚠️ Báo Ngoại Lệ
+                  </a>
+                ` : ""}
+              </div>
+
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function filterStops(filter, btn) {
+      activeFilter = filter;
+      document.querySelectorAll("#filter-buttons .btn").forEach(b => {
+        b.className = "btn btn-outline btn-sm";
+      });
+      btn.className = "btn btn-primary btn-sm";
+      renderStops();
+    }
+
+    function searchStops(keyword) {
+      const q = keyword.toLowerCase();
+      const all = window.PP_DATA.getStops();
+      currentStops = all.filter(s => 
+        s.recipientName.toLowerCase().includes(q) ||
+        s.address.toLowerCase().includes(q) ||
+        s.parcelId.toLowerCase().includes(q)
+      );
+      renderStops();
+    }
+
+    function runRouteOptimizationAI() {
+      const panel = document.getElementById("ai-route-panel");
+      const loading = document.getElementById("ai-route-loading");
+      const result = document.getElementById("ai-route-result");
+
+      panel.style.display = "block";
+      loading.style.display = "block";
+      result.style.display = "none";
+      panel.scrollIntoView({ behavior: 'smooth' });
+
+      setTimeout(() => {
+        loading.style.display = "none";
+        result.style.display = "block";
+      }, 1500);
+    }
+
+    function applyOptimizedRoute() {
+      // Đổi thứ tự stop Keangnam lên trước
+      currentStops = [
+        currentStops[0],
+        currentStops[4], // Đơn Keangnam gom lại
+        currentStops[2],
+        currentStops[1],
+        currentStops[3]
+      ];
+      currentStops.forEach((s, idx) => s.sequence = idx + 1);
+      
+      showToast("Đã áp dụng thứ tự giao hàng tối ưu mới!", "success");
+      document.getElementById("ai-route-panel").style.display = "none";
+      renderStops();
+    }
+  </script>
+</body>
+</html>
