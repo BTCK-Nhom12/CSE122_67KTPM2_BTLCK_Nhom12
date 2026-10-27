@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Báo Cáo Logistics & Phân Tích Ngoại Lệ - ParcelPulse Admin</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* CSS Native Bar Chart */
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 1.25rem;
+      height: 180px;
+      padding-top: 1.5rem;
+      border-bottom: 2px solid var(--border-color);
+      margin-top: 1rem;
+    }
+    .bar-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      height: 100%;
+      justify-content: flex-end;
+    }
+    .bar-fill {
+      width: 100%;
+      max-width: 42px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: linear-gradient(to top, var(--primary), #3B82F6);
+      transition: height 0.8s ease-out;
+      position: relative;
+    }
+    .bar-fill:hover {
+      background: linear-gradient(to top, var(--accent), #FB923C);
+    }
+    .bar-val {
+      position: absolute;
+      top: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .bar-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-container">
+      <a href="../index.html" class="brand-logo">📦</a>
+      <div class="brand-title">
+        ParcelPulse
+        <span>Quản Trị Viên Hệ Thống</span>
+      </div>
+    </div>
+
+    <button type="button" class="menu-toggle" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="main-nav">☰</button>
+
+    <nav class="main-nav" aria-label="Điều hướng chính">
+      <ul class="nav-links" id="main-nav">
+      <li><a href="admin-status-management.html" class="nav-link">📦 Trạng Thái Kiện Hàng</a></li>
+      <li><a href="admin-user-management.html" class="nav-link">👥 Quản Lý Người Dùng</a></li>
+      <li><a href="admin-logistics-report.html" class="nav-link active" aria-current="page">📈 Báo Cáo Logistics</a></li>
+      <li><a href="../index.html" class="nav-link">🔄 Đổi Vai Trò</a></li>
+    </ul>
+    </nav>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline btn-sm" onclick="toggleTheme()" aria-label="Chuyển chế độ sáng tối" aria-pressed="false">🌓</button>
+      <div class="user-profile-badge" id="header-user-badge"></div>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">📈 Báo Cáo Phân Tích Logistics & Ngoại Lệ Chặng Cuối</h1>
+        <p class="page-subtitle">Đánh giá tỷ lệ giao đúng hẹn (OTD), chi phí sự cố và xu hướng dự báo từ mô hình AI</p>
+      </div>
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <button type="button" class="btn btn-accent" onclick="runLogisticsAIInsight()">
+          ⚡ AI Phân Tích Xu Hướng & Điểm Nghẽn
+        </button>
+        <button type="button" class="btn btn-primary" onclick="exportReportCSV()">
+          📥 Xuất Báo Cáo (CSV)
+        </button>
+      </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="card" style="margin-bottom: 2rem; padding: 1rem 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;" id="period-buttons" role="group" aria-label="Chọn khoảng thời gian báo cáo">
+          <span style="font-weight: 700; font-size: 0.9rem;">Khoảng thời gian:</span>
+          <button type="button" class="btn btn-primary btn-sm" data-period="7days" aria-pressed="true" onclick="setPeriod(this, '7days')">7 Ngày Gần Nhất</button>
+          <button type="button" class="btn btn-outline btn-sm" data-period="month" aria-pressed="false" onclick="setPeriod(this, 'month')">Tháng 10/2024</button>
+          <button type="button" class="btn btn-outline btn-sm" data-period="quarter" aria-pressed="false" onclick="setPeriod(this, 'quarter')">Quý 4/2024</button>
+        </div>
+        <span style="font-size: 0.85rem; color: var(--text-muted);" id="report-updated-at">Dữ liệu cập nhật lúc: —</span>
+      </div>
+    </div>
+
+    <!-- 4 High Level KPIs -->
+    <div class="grid-cols-4" aria-live="polite">
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" style="color: var(--success);" id="kpi-otd">—</div>
+          <div class="stat-label" id="kpi-otd-label">Tỷ Lệ Giao Đúng Hẹn (OTD)</div>
+        </div>
+        <div class="stat-icon success">🎯</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" style="color: var(--danger);" id="kpi-exceptions">0</div>
+          <div class="stat-label" id="kpi-exceptions-label">Tổng Ca Ngoại Lệ Phát Sinh</div>
+        </div>
+        <div class="stat-icon danger">⚠️</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" style="color: var(--accent);" id="kpi-processing-time">—</div>
+          <div class="stat-label" id="kpi-processing-label">Thời Gian Xử Lý Trung Bình</div>
+        </div>
+        <div class="stat-icon accent">⏱️</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" style="color: var(--info);" id="kpi-rto">0%</div>
+          <div class="stat-label">Tỷ Lệ Chuyển Hoàn (RTO)</div>
+        </div>
+        <div class="stat-icon purple">↩️</div>
+      </div>
+    </div>
+
+    <!-- AI Insights Container (AI-2 Trend Insights) -->
+    <div class="ai-container" id="ai-insight-panel" style="display: none; margin-bottom: 2rem;">
+      <div class="ai-header">
+        <span class="ai-badge">
+          <span class="sparkle">✨</span> AI-2: Logistics Trend Insights
+        </span>
+        <button type="button" class="btn btn-outline btn-sm" aria-label="Đóng bảng phân tích xu hướng AI" onclick="document.getElementById('ai-insight-panel').style.display='none'">Đóng</button>
+      </div>
+
+      <div id="ai-insight-loading" class="ai-processing" style="display: none;" role="status" aria-live="polite">
+        <div class="ai-spinner" aria-hidden="true"></div>
+        <p id="ai-insight-loading-text" style="font-weight: 600;">Thuật toán Machine Learning đang phân tích dữ liệu giao hàng...</p>
+      </div>
+
+      <div id="ai-insight-result" class="ai-result-box">
+        <h3 id="ai-insight-heading" style="color: var(--primary); font-weight: 800; font-size: 1.15rem; margin-bottom: 0.5rem;">
+          📊 Phát Hiện Trọng Yếu Từ Dữ Liệu Ngoại Lệ
+        </h3>
+
+        <div id="ai-insight-list" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+          <!-- Rendered by JS -->
+        </div>
+
+        <div class="ai-actions">
+          <button type="button" class="btn btn-success btn-sm" onclick="saveAIInsightReport()">💾 Lưu Báo Cáo Này</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="exportReportCSV()">📥 Tải Xuống Dạng File</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts & Analytics Section -->
+    <div class="grid-cols-2">
+
+      <!-- Bar Chart: Deliveries by Day -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📊 Sản Lượng Giao Thành Công 7 Ngày Qua</h2>
+          <span class="badge badge-delivered" id="volume-total-badge">Tổng: 0 đơn</span>
+        </div>
+
+        <div class="bar-chart" id="volume-chart" role="img" aria-label="Đang tải biểu đồ sản lượng giao hàng"></div>
+      </div>
+
+      <!-- Breakdown: Exception Categories -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">⚠️ Phân Bổ Nguyên Nhân Ngoại Lệ</h2>
+          <span class="badge badge-exception" id="exception-total-badge">0 ca</span>
+        </div>
+
+        <div id="exception-breakdown" aria-live="polite" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Top Performing Drivers Table -->
+    <div class="card" style="margin-top: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title">🏆 Bảng Xếp Hạng Hiệu Suất Tài Xế Tuyến Chặng Cuối</h2>
+        <span class="badge badge-delivered" id="top-drivers-badge">0 tài xế</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <caption class="sr-only">Xếp hạng hiệu suất giao hàng của tài xế</caption>
+          <thead>
+            <tr>
+              <th scope="col">Hạng</th>
+              <th scope="col">Tài Xế</th>
+              <th scope="col">Tuyến Phụ Trách</th>
+              <th scope="col">Số Đơn Đã Giao</th>
+              <th scope="col">Tỷ Lệ Thành Công</th>
+              <th scope="col">Đánh Giá Từ Khách</th>
+              <th scope="col">Thưởng Hiệu Quả</th>
+            </tr>
+          </thead>
+          <tbody id="top-drivers-tbody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>ParcelPulse - CSE122 Hệ thống báo cáo & Tối ưu hóa hiệu năng giao nhận logistics</p>
+  </footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    let currentPeriod = "7days";
+
+    const PERIOD_LABELS = {
+      "7days": "7 ngày gần nhất",
+      month: "Tháng 10/2024",
+      quarter: "Quý 4/2024"
+    };
+
+    const EXCEPTION_LABELS = {
+      customer_absent: "Khách hàng vắng mặt",
+      wrong_address: "Sai địa chỉ / Không tìm thấy",
+      reschedule_request: "Yêu cầu đổi lịch giao",
+      damaged: "Hàng hỏng / Móp méo",
+      refused_delivery: "Người nhận từ chối",
+      weather_delay: "Thời tiết / Giao thông bất khả kháng"
+    };
+
+    const EXCEPTION_SUGGESTIONS = {
+      customer_absent: "Khuyến khích người nhận chọn điểm gửi an toàn hoặc dời ca chiều sau 17h.",
+      wrong_address: "Gửi liên kết định vị GPS để người nhận ghim lại vị trí chính xác.",
+      reschedule_request: "Cho phép dời lịch tự động và lưu kho tạm tại hub gần nhất.",
+      damaged: "Yêu cầu chụp ảnh 4 góc, lập biên bản đồng kiểm trước khi xử lý tiếp.",
+      refused_delivery: "Ghi nhận lý do từ chối và chuyển thông báo về người gửi.",
+      weather_delay: "Tự động cộng thêm 45-60 phút vào ETA và thông báo cho khách."
+    };
+
+    const BREAKDOWN_COLORS = ["var(--accent)", "var(--danger)", "var(--warning)", "var(--primary)", "var(--info)", "var(--purple)"];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      renderReport();
+    });
+
+    function parseDate(value) {
+      if (!value) return NaN;
+      return new Date(String(value).replace(" ", "T")).getTime();
+    }
+
+    function getAnchorDate() {
+      const volumeDates = window.PP_DATA.getDailyVolume().map(item => item.date).filter(Boolean).sort();
+      if (volumeDates.length > 0) return volumeDates[volumeDates.length - 1];
+
+      const parcelDates = window.PP_DATA.getParcels()
+        .map(parcel => String(parcel.createdAt || "").slice(0, 10))
+        .filter(Boolean)
+        .sort();
+      if (parcelDates.length > 0) return parcelDates[parcelDates.length - 1];
+
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function getPeriodRange(period, anchorDate) {
+      const anchor = new Date(`${anchorDate}T00:00:00`);
+      const year = anchor.getFullYear();
+      const month = anchor.getMonth();
+
+      if (period === "month") {
+        return {
+          start: new Date(year, month, 1, 0, 0, 0),
+          end: new Date(year, month + 1, 0, 23, 59, 59)
+        };
+      }
+      if (period === "quarter") {
+        const quarterStartMonth = Math.floor(month / 3) * 3;
+        return {
+          start: new Date(year, quarterStartMonth, 1, 0, 0, 0),
+          end: new Date(year, quarterStartMonth + 3, 0, 23, 59, 59)
+        };
+      }
+      return {
+        start: new Date(year, month, anchor.getDate() - 6, 0, 0, 0),
+        end: new Date(year, month, anchor.getDate(), 23, 59, 59)
+      };
+    }
+
+    function getReportData() {
+      const anchorDate = getAnchorDate();
+      const range = getPeriodRange(currentPeriod, anchorDate);
+      const allParcels = window.PP_DATA.getParcels();
+      const allExceptions = window.PP_DATA.getExceptions();
+      const drivers = window.PP_DATA.getDriverPerformance();
+
+      const inRange = (value) => {
+        const time = parseDate(value);
+        return !Number.isNaN(time) && time >= range.start.getTime() && time <= range.end.getTime();
+      };
+
+      return {
+        parcels: allParcels.filter(parcel => inRange(parcel.createdAt)),
+        exceptions: allExceptions.filter(exc => inRange(exc.createdAt)),
+        drivers: drivers,
+        range: range,
+        anchorDate: anchorDate
+      };
+    }
+
+    function renderReport() {
+      const data = getReportData();
+      renderKpis(data);
+      renderVolumeChart();
+      renderExceptionBreakdown(data);
+      renderTopDrivers(data.drivers);
+      renderUpdatedAt();
+
+      const panel = document.getElementById("ai-insight-panel");
+      const loading = document.getElementById("ai-insight-loading");
+      if (panel.style.display === "block" && loading.style.display === "none") {
+        renderAIInsightContent(data);
+      }
+    }
+
+    function renderKpis(data) {
+      const delivered = data.parcels.filter(parcel => parcel.status === "delivered");
+      const onTime = delivered.filter(parcel => {
+        const actual = parseDate(parcel.deliveredAt);
+        const expected = parseDate(parcel.estimatedDelivery);
+        return !Number.isNaN(actual) && !Number.isNaN(expected) && actual <= expected;
+      }).length;
+
+      const otdValue = delivered.length > 0 ? `${Math.round((onTime / delivered.length) * 1000) / 10}%` : "—";
+      document.getElementById("kpi-otd").textContent = otdValue;
+      document.getElementById("kpi-otd-label").textContent = delivered.length > 0
+        ? `Tỷ Lệ Giao Đúng Hẹn (${onTime}/${delivered.length} đơn)`
+        : "Tỷ Lệ Giao Đúng Hẹn (chưa có đơn)";
+
+      document.getElementById("kpi-exceptions").textContent = data.exceptions.length;
+      document.getElementById("kpi-exceptions-label").textContent = `Tổng Ca Ngoại Lệ (${PERIOD_LABELS[currentPeriod]})`;
+
+      const resolved = data.exceptions.filter(exc => exc.resolvedAt && exc.createdAt);
+      let avgMinutes = null;
+      if (resolved.length > 0) {
+        const totalMinutes = resolved.reduce((sum, exc) => {
+          const created = parseDate(exc.createdAt);
+          const resolvedAt = parseDate(exc.resolvedAt);
+          if (Number.isNaN(created) || Number.isNaN(resolvedAt)) return sum;
+          return sum + Math.max(0, (resolvedAt - created) / 60000);
+        }, 0);
+        avgMinutes = Math.round(totalMinutes / resolved.length);
+      }
+      document.getElementById("kpi-processing-time").textContent = avgMinutes === null ? "—" : `${avgMinutes} phút`;
+      document.getElementById("kpi-processing-label").textContent = avgMinutes === null
+        ? "Thời Gian Xử Lý (chưa có case đóng)"
+        : `Thời Gian Xử Lý Trung Bình (${resolved.length} case)`;
+
+      const returned = data.parcels.filter(parcel => parcel.status === "returned").length;
+      const rto = data.parcels.length > 0 ? Math.round((returned / data.parcels.length) * 1000) / 10 : 0;
+      document.getElementById("kpi-rto").textContent = `${rto}%`;
+    }
+
+    function renderVolumeChart() {
+      const chart = document.getElementById("volume-chart");
+      const badge = document.getElementById("volume-total-badge");
+      const volume = window.PP_DATA.getDailyVolume();
+      const safe = (value) => PP_UTILS.escapeHTML(value);
+
+      if (!Array.isArray(volume) || volume.length === 0) {
+        chart.innerHTML = `<p style="font-size: 0.85rem; color: var(--text-muted);">Chưa có dữ liệu sản lượng.</p>`;
+        chart.setAttribute("aria-label", "Chưa có dữ liệu sản lượng giao hàng");
+        badge.textContent = "Tổng: 0 đơn";
+        return;
+      }
+
+      const max = Math.max(...volume.map(item => Number(item.count) || 0), 1);
+      const total = volume.reduce((sum, item) => sum + (Number(item.count) || 0), 0);
+
+      chart.innerHTML = volume.map(item => {
+        const count = Number(item.count) || 0;
+        const height = Math.max(4, Math.round((count / max) * 100));
+        return `
+          <div class="bar-group">
+            <div class="bar-fill" style="height: ${height}%;" title="${safe(item.label)}: ${count} đơn">
+              <span class="bar-val">${count}</span>
+            </div>
+            <span class="bar-label">${safe(item.label)}</span>
+          </div>
+        `;
+      }).join("");
+
+      badge.textContent = `Tổng: ${total.toLocaleString("vi-VN")} đơn`;
+      chart.setAttribute(
+        "aria-label",
+        `Biểu đồ sản lượng giao thành công 7 ngày: ${volume.map(item => `${item.label} ${item.count} đơn`).join(", ")}`
+      );
+    }
+
+    function renderExceptionBreakdown(data) {
+      const container = document.getElementById("exception-breakdown");
+      const badge = document.getElementById("exception-total-badge");
+      const total = data.exceptions.length;
+      badge.textContent = `${total} ca`;
+
+      if (total === 0) {
+        container.innerHTML = `
+          <div class="state-empty" style="padding: 1.5rem 0;">
+            <div class="state-empty-icon">✅</div>
+            <p>Không có ngoại lệ nào trong kỳ báo cáo đã chọn.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const counts = new Map();
+      data.exceptions.forEach(exc => {
+        const key = exc.exceptionType || "other";
+        const current = counts.get(key) || {
+          label: exc.exceptionTypeLabel || EXCEPTION_LABELS[key] || "Khác",
+          count: 0
+        };
+        current.count += 1;
+        counts.set(key, current);
+      });
+
+      const items = Array.from(counts.values()).sort((a, b) => b.count - a.count);
+      const safe = (value) => PP_UTILS.escapeHTML(value);
+
+      container.innerHTML = items.map((item, index) => {
+        const share = Math.round((item.count / total) * 1000) / 10;
+        const color = BREAKDOWN_COLORS[index % BREAKDOWN_COLORS.length];
+        return `
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem; gap: 0.75rem;">
+              <span>${safe(item.label)}</span>
+              <strong>${item.count} ca (${share}%)</strong>
+            </div>
+            <div style="height: 10px; background: var(--bg-subtle); border-radius: var(--radius-full); overflow: hidden;">
+              <div style="width: ${Math.max(2, share)}%; height: 100%; background: ${color};"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderTopDrivers(drivers) {
+      const tbody = document.getElementById("top-drivers-tbody");
+      const badge = document.getElementById("top-drivers-badge");
+
+      const sorted = drivers.slice().sort((a, b) => {
+        const successDiff = (Number(b.successRate) || 0) - (Number(a.successRate) || 0);
+        if (successDiff !== 0) return successDiff;
+        return (Number(b.deliveries) || 0) - (Number(a.deliveries) || 0);
+      });
+
+      badge.textContent = `${sorted.length} tài xế`;
+
+      if (sorted.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="state-empty">
+              <div class="state-empty-icon">🏆</div>
+              <p>Chưa có dữ liệu hiệu suất tài xế.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const medals = ["🥇", "🥈", "🥉"];
+      const safe = (value) => PP_UTILS.escapeHTML(value);
+
+      tbody.innerHTML = sorted.map((driver, index) => {
+        const successRate = Number(driver.successRate) || 0;
+        const rating = Number(driver.rating) || 0;
+        const bonus = Number(driver.bonus) || 0;
+        return `
+          <tr>
+            <td>${medals[index] ? `<span style="font-size: 1.25rem;">${medals[index]}</span> ` : ""}<strong>#${index + 1}</strong></td>
+            <td><strong>${safe(driver.name)}</strong></td>
+            <td>${safe(driver.route)}</td>
+            <td>${(Number(driver.deliveries) || 0).toLocaleString("vi-VN")} đơn</td>
+            <td><strong style="color: var(--success);">${successRate.toFixed(1)}%</strong></td>
+            <td>⭐ ${rating.toFixed(1)} / 5.0 (${Number(driver.reviews) || 0} lượt)</td>
+            <td><span class="badge badge-delivered">+${formatVND(bonus)}</span></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderUpdatedAt() {
+      const timestamps = [
+        ...window.PP_DATA.getParcels().map(parcel => parcel.createdAt),
+        ...window.PP_DATA.getExceptions().map(exc => exc.createdAt)
+      ].filter(Boolean).sort();
+
+      document.getElementById("report-updated-at").textContent = timestamps.length > 0
+        ? `Dữ liệu cập nhật lúc: ${timestamps[timestamps.length - 1]}`
+        : "Dữ liệu cập nhật lúc: chưa có";
+    }
+
+    function setPeriod(btn, period) {
+      if (!PERIOD_LABELS[period]) return;
+
+      currentPeriod = period;
+      document.querySelectorAll("#period-buttons [data-period]").forEach(button => {
+        const active = button.dataset.period === period;
+        button.classList.toggle("btn-primary", active);
+        button.classList.toggle("btn-outline", !active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+
+      renderReport();
+      const data = getReportData();
+      showToast(`Đã tải báo cáo ${PERIOD_LABELS[period]}: ${data.parcels.length} bưu kiện, ${data.exceptions.length} ngoại lệ.`, "info");
+    }
+
+    function runLogisticsAIInsight() {
+      const panel = document.getElementById("ai-insight-panel");
+      const loading = document.getElementById("ai-insight-loading");
+      const result = document.getElementById("ai-insight-result");
+      const data = getReportData();
+
+      panel.style.display = "block";
+      loading.style.display = "block";
+      result.style.display = "none";
+      document.getElementById("ai-insight-loading-text").textContent =
+        `Thuật toán Machine Learning đang phân tích ${data.parcels.length} bưu kiện và ${data.exceptions.length} ca ngoại lệ...`;
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      setTimeout(() => {
+        loading.style.display = "none";
+        result.style.display = "block";
+        renderAIInsightContent(data);
+        showToast("AI đã hoàn tất phân tích xu hướng vận hành.", "success");
+      }, 1400);
+    }
+
+    function renderAIInsightContent(data) {
+      const listEl = document.getElementById("ai-insight-list");
+      const headingEl = document.getElementById("ai-insight-heading");
+      const safe = (value) => PP_UTILS.escapeHTML(value);
+      const insights = [];
+
+      if (data.exceptions.length > 0) {
+        const counts = new Map();
+        data.exceptions.forEach(exc => {
+          const key = exc.exceptionType || "other";
+          const current = counts.get(key) || {
+            key: key,
+            label: exc.exceptionTypeLabel || EXCEPTION_LABELS[key] || "Khác",
+            count: 0
+          };
+          current.count += 1;
+          counts.set(key, current);
+        });
+        const top = Array.from(counts.values()).sort((a, b) => b.count - a.count)[0];
+        const share = Math.round((top.count / data.exceptions.length) * 1000) / 10;
+        insights.push({
+          title: `Nhóm ngoại lệ chiếm tỷ trọng cao nhất: ${top.label}`,
+          body: `${top.count}/${data.exceptions.length} ca (${share}%) thuộc nhóm này. Đề xuất: ${EXCEPTION_SUGGESTIONS[top.key] || "Bổ sung quy trình xử lý chuyên biệt cho nhóm sự cố này."}`
+        });
+      } else {
+        insights.push({
+          title: "Không phát sinh ngoại lệ trong kỳ báo cáo",
+          body: "Hàng đợi sạch trong khoảng thời gian đã chọn. Tiếp tục theo dõi các ca giao chặng cuối để giữ tỷ lệ OTD ổn định."
+        });
+      }
+
+      const allParcels = window.PP_DATA.getParcels();
+      const openExceptions = data.exceptions.filter(exc => exc.status !== "resolved");
+      const codAtRisk = openExceptions.reduce((sum, exc) => {
+        const parcel = allParcels.find(item => item.trackingNumber === exc.trackingNumber || item.id === exc.parcelId);
+        return sum + (parcel ? Number(parcel.codAmount) || 0 : 0);
+      }, 0);
+
+      if (openExceptions.length > 0) {
+        insights.push({
+          title: `Giá trị COD đang bị giữ: ${formatVND(codAtRisk)}`,
+          body: `${openExceptions.length} ngoại lệ chưa đóng đang giữ giá trị thu hộ trên. Ưu tiên xử lý các case có COD cao và mức độ khẩn cấp để tránh rủi ro tồn kho và hoàn hàng.`
+        });
+      } else {
+        insights.push({
+          title: "Toàn bộ ngoại lệ trong kỳ đã được đóng",
+          body: "Không còn giá trị COD bị giữ bởi sự cố. Tiếp tục theo dõi các chuyến đang giao để cập nhật ETA kịp thời."
+        });
+      }
+
+      const resolved = data.exceptions.filter(exc => exc.resolvedAt && exc.createdAt);
+      if (resolved.length > 0) {
+        const totalMinutes = resolved.reduce((sum, exc) => {
+          const created = parseDate(exc.createdAt);
+          const resolvedAt = parseDate(exc.resolvedAt);
+          if (Number.isNaN(created) || Number.isNaN(resolvedAt)) return sum;
+          return sum + Math.max(0, (resolvedAt - created) / 60000);
+        }, 0);
+        const average = Math.round(totalMinutes / resolved.length);
+        insights.push({
+          title: `Hiệu quả xử lý ngoại lệ: trung bình ${average} phút/case`,
+          body: `${resolved.length} case đã được đóng trong kỳ. Duy trì quy trình phản hồi dưới 60 phút để hạn chế ảnh hưởng đến tỷ lệ giao đúng hẹn.`
+        });
+      } else {
+        const topDriver = data.drivers.slice().sort((a, b) => (Number(b.successRate) || 0) - (Number(a.successRate) || 0))[0];
+        insights.push({
+          title: topDriver ? `Tài xế dẫn đầu: ${topDriver.name} (${Number(topDriver.successRate).toFixed(1)}%)` : "Chưa có case ngoại lệ nào được đóng",
+          body: topDriver
+            ? `Hiệu suất giao thành công của ${topDriver.name} đang dẫn đầu đội xe. Có thể ưu tiên phân công các tuyến khó cho tài xế này trong ca tới.`
+            : "Chưa ghi nhận thời gian xử lý thực tế. Hãy đóng case trong Hàng Đợi Ngoại Lệ để báo cáo tính được thời gian xử lý trung bình."
+        });
+      }
+
+      headingEl.textContent = `📊 ${insights.length} Phát Hiện Trọng Yếu Từ Dữ Liệu`;
+      listEl.innerHTML = insights.map((insight, index) => `
+        <div class="ai-explanation">
+          <strong>${index + 1}. ${safe(insight.title)}:</strong>
+          <p style="margin-top: 0.2rem;">${safe(insight.body)}</p>
+        </div>
+      `).join("");
+    }
+
+    function saveAIInsightReport() {
+      const data = getReportData();
+      logAuditTrail(
+        "SAVE_REPORT",
+        "LOGISTICS_REPORT",
+        `Lưu báo cáo AI kỳ ${PERIOD_LABELS[currentPeriod]}: ${data.parcels.length} bưu kiện, ${data.exceptions.length} ngoại lệ.`
+      );
+      showToast("Đã lưu báo cáo AI Insight vào nhật ký kiểm toán!", "success");
+    }
+
+    function csvCell(value) {
+      return `"${String(value ?? "").replace(/"/g, '""')}"`;
+    }
+
+    function exportReportCSV() {
+      const parcels = window.PP_DATA.getParcels();
+      const headers = ["Mã vận đơn", "Người nhận", "Người gửi", "Trạng thái", "COD (VND)", "Tài xế", "Ngày tạo", "ETA", "Địa chỉ"];
+      const rows = parcels.map(parcel => [
+        parcel.trackingNumber,
+        parcel.recipientName,
+        parcel.senderName,
+        parcel.statusLabel,
+        Number(parcel.codAmount) || 0,
+        parcel.driverName || "Chưa phân công",
+        parcel.createdAt,
+        parcel.estimatedDelivery,
+        parcel.deliveryAddress
+      ].map(csvCell).join(","));
+
+      const csvContent = `\uFEFF${headers.map(csvCell).join(",")}\n${rows.join("\n")}`;
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ParcelPulse_Logistics_${currentPeriod}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+
+      showToast(`Đã xuất báo cáo CSV gồm ${parcels.length} bưu kiện.`, "success");
+    }
+  </script>
+</body>
+</html>
