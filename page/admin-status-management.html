@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Lý Trạng Thái Kiện Hàng - ParcelPulse Admin</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-container">
+      <a href="../index.html" class="brand-logo">🛡️</a>
+      <div class="brand-title">
+        ParcelPulse
+        <span>Quản Trị Viên Hệ Thống</span>
+      </div>
+    </div>
+
+    <button type="button" class="menu-toggle" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="main-nav">☰</button>
+
+    <nav class="main-nav" aria-label="Điều hướng chính">
+      <ul class="nav-links" id="main-nav">
+      <li><a href="admin-status-management.html" class="nav-link active" aria-current="page">📦 Trạng Thái Kiện Hàng</a></li>
+      <li><a href="admin-user-management.html" class="nav-link">👥 Quản Lý Người Dùng</a></li>
+      <li><a href="admin-logistics-report.html" class="nav-link">📈 Báo Cáo Logistics</a></li>
+      <li><a href="../index.html" class="nav-link">🔄 Đổi Vai Trò</a></li>
+    </ul>
+    </nav>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline btn-sm" onclick="toggleTheme()" aria-label="Chuyển chế độ sáng tối" aria-pressed="false">🌓</button>
+      <div class="user-profile-badge" id="header-user-badge"></div>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">📦 Quản Lý & kiểm Soát Trạng Thái Kiện Hàng</h1>
+        <p class="page-subtitle">Theo dõi trạng thái bưu kiện toàn mạng lưới, can thiệp thủ công và kiểm toán thay đổi</p>
+      </div>
+      <button class="btn btn-primary" onclick="openBulkUpdateModal()">⚡ Cập Nhật Trạng Thái Hàng Loạt</button>
+    </div>
+
+    <!-- Quick Metrics -->
+    <div class="grid-cols-4">
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" id="cnt-total">6</div>
+          <div class="stat-label">Tổng Kiện Trong Kho</div>
+        </div>
+        <div class="stat-icon primary">📦</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" id="cnt-transit" style="color: var(--info);">1</div>
+          <div class="stat-label">Đang Trung Chuyển</div>
+        </div>
+        <div class="stat-icon purple">🚚</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" id="cnt-exception" style="color: var(--danger);">2</div>
+          <div class="stat-label">Đang Gặp Ngoại Lệ</div>
+        </div>
+        <div class="stat-icon danger">⚠️</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-info">
+          <div class="stat-value" id="cnt-delivered" style="color: var(--success);">1</div>
+          <div class="stat-label">Đã Giao Thành Công</div>
+        </div>
+        <div class="stat-icon success">✅</div>
+      </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        
+        <div class="search-wrapper" style="flex: 1 1 280px;">
+          <span class="search-icon" aria-hidden="true">🔎</span>
+          <input type="search" id="admin-search-input" class="form-control" placeholder="Tìm theo mã vận đơn, người gửi, người nhận..." aria-label="Tìm kiếm bưu kiện theo mã vận đơn, người gửi hoặc người nhận" oninput="filterParcelsTable()">
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <select id="filter-status-select" class="form-control" style="width: auto;" aria-label="Lọc bưu kiện theo trạng thái" onchange="filterParcelsTable()">
+            <option value="all">Tất cả trạng thái</option>
+            <option value="pending">Chờ xử lý / Đóng gói</option>
+            <option value="in_transit">Đang trung chuyển</option>
+            <option value="out_for_delivery">Đang đi giao</option>
+            <option value="delivered">Giao thành công</option>
+            <option value="exception">Có ngoại lệ</option>
+          </select>
+
+          <button class="btn btn-outline" onclick="resetFilters()">Đặt Lại</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Parcels Table (R) -->
+    <div class="table-responsive">
+      <table class="table">
+        <caption class="sr-only">Danh sách bưu kiện trong kho và trạng thái hiện tại</caption>
+        <thead>
+          <tr>
+            <th scope="col" style="width: 40px;"><input type="checkbox" id="chk-select-all" aria-label="Chọn tất cả bưu kiện đang hiển thị" onchange="toggleSelectAll(this)"></th>
+            <th scope="col">Mã Vận Đơn</th>
+            <th scope="col">Người Gửi</th>
+            <th scope="col">Người Nhận &amp; Địa Chỉ</th>
+            <th scope="col">Trạng Thái</th>
+            <th scope="col">Tài Xế Phụ Trách</th>
+            <th scope="col">Dự Kiến ETA</th>
+            <th scope="col" style="text-align: right;">Hành Động</th>
+          </tr>
+        </thead>
+        <tbody id="admin-parcels-tbody">
+          <!-- Rendered by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Audit Trail (R) -->
+    <div class="card" style="margin-top: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title">🧾 Nhật Ký Kiểm Toán Gần Nhất</h2>
+        <span class="badge badge-pending" id="audit-count-badge">0 bản ghi</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <caption class="sr-only">Nhật ký các thay đổi trạng thái bưu kiện gần đây</caption>
+          <thead>
+            <tr>
+              <th scope="col">Thời Gian</th>
+              <th scope="col">Người Thực Hiện</th>
+              <th scope="col">Hành Động</th>
+              <th scope="col">Đối Tượng</th>
+              <th scope="col">Chi Tiết</th>
+            </tr>
+          </thead>
+          <tbody id="audit-log-tbody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal Đổi Trạng Thái Kiện Hàng (U) -->
+  <div class="modal-backdrop" id="modal-change-status">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-status-title" style="font-weight: 800; color: var(--primary);">✏️ Cập Nhật Trạng Thái Bưu Kiện (U)</h3>
+        <button type="button" class="btn btn-outline btn-sm" aria-label="Đóng hộp thoại cập nhật trạng thái" onclick="closeModal('modal-change-status')">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="form-update-status" onsubmit="handleUpdateStatusSubmit(event)">
+          <input type="hidden" id="edit-parcel-id">
+
+          <div class="form-group">
+            <label class="form-label" for="edit-tracking-display" id="edit-tracking-label">Mã Vận Đơn</label>
+            <input type="text" id="edit-tracking-display" class="form-control" readonly style="background: var(--bg-subtle); font-weight: 700;">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-new-status">Trạng Thái Nghiệp Vụ Mới <span class="required">*</span></label>
+            <select id="edit-new-status" class="form-control" required>
+              <option value="pending">Chờ điều phối (Pending)</option>
+              <option value="in_transit">Đang trung chuyển (In Transit)</option>
+              <option value="out_for_delivery">Đang đi giao chặng cuối (Out for Delivery)</option>
+              <option value="delivered">Giao hàng thành công (Delivered)</option>
+              <option value="exception">Có ngoại lệ phát sinh (Exception)</option>
+              <option value="returned">Chuyển hoàn về người gửi (Returned)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-audit-reason">Lý Do Can Thiệp Kiểm Toán (Audit Note) <span class="required">*</span></label>
+            <textarea id="edit-audit-reason" class="form-control" minlength="5" maxlength="500" placeholder="Ghi rõ lý do thay đổi trạng thái theo biên bản..." aria-describedby="edit-audit-help edit-audit-error" required></textarea>
+            <div id="edit-audit-help" class="form-help">Hệ thống ghi nhận dấu vết người cập nhật và thời gian thực hiện.</div>
+            <div id="edit-audit-error" class="form-error" role="alert" aria-live="assertive"></div>
+          </div>
+
+          <div class="modal-footer" style="padding: 1rem 0 0 0; background: none; border-top: none;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('modal-change-status')">Hủy Bỏ</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-status">💾 Xác Nhận Thay Đổi</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>ParcelPulse - CSE122 Kiểm soát trạng thái & Nhật ký kiểm toán bưu kiện</p>
+  </footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    let parcelsList = [];
+    let editTargets = [];
+    let statusSubmitting = false;
+
+    const STATUS_LABELS = {
+      pending: "Chờ điều phối",
+      in_transit: "Đang trung chuyển",
+      out_for_delivery: "Đang đi giao",
+      delivered: "Giao thành công",
+      exception: "Có ngoại lệ",
+      returned: "Đã chuyển hoàn"
+    };
+
+    const AUDIT_ACTION_LABELS = {
+      UPDATE_PARCEL_STATUS: "Cập nhật trạng thái bưu kiện",
+      RESOLVE_EXCEPTION: "Đóng hồ sơ ngoại lệ",
+      UPDATE_EXCEPTION: "Cập nhật ngoại lệ",
+      CREATE_EXCEPTION: "Tạo ngoại lệ",
+      DELETE_EXCEPTION: "Hủy báo cáo ngoại lệ",
+      REASSIGN_PARCEL: "Phân công lại tài xế",
+      CREATE_PREFERENCE: "Lưu tùy chọn giao hàng",
+      CREATE_FEEDBACK: "Gửi đánh giá",
+      CONFIRM_DELIVERY: "Xác nhận giao hàng",
+      UPDATE_STOP_NOTES: "Cập nhật ghi chú điểm dừng",
+      OPTIMIZE_ROUTE: "Tối ưu thứ tự lộ trình",
+      SAVE_REPORT: "Lưu báo cáo phân tích",
+      AI_ACTION_ACCEPTED: "Áp dụng gợi ý AI",
+      CREATE_USER: "Tạo tài khoản",
+      UPDATE_USER: "Cập nhật tài khoản",
+      LOCK_USER: "Khóa tài khoản",
+      UNLOCK_USER: "Mở khóa tài khoản",
+      DELETE_USER: "Xóa tài khoản"
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      parcelsList = window.PP_DATA.getParcels();
+      renderParcelsTable();
+      updateMetricCounts();
+      renderAuditLogs();
+
+      const tbody = document.getElementById("admin-parcels-tbody");
+      tbody.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-tracking]");
+        if (button) openStatusModal(button.dataset.tracking);
+      });
+      tbody.addEventListener("change", (event) => {
+        if (event.target.classList.contains("row-select-chk")) syncSelectAll();
+      });
+    });
+
+    function updateMetricCounts() {
+      document.getElementById("cnt-total").textContent = parcelsList.length;
+      document.getElementById("cnt-transit").textContent = parcelsList.filter(p => p.status === "in_transit").length;
+      document.getElementById("cnt-exception").textContent = parcelsList.filter(p => p.status === "exception").length;
+      document.getElementById("cnt-delivered").textContent = parcelsList.filter(p => p.status === "delivered").length;
+    }
+
+    function renderParcelsTable() {
+      const tbody = document.getElementById("admin-parcels-tbody");
+      const searchVal = document.getElementById("admin-search-input").value.toLowerCase().trim();
+      const statusFilter = document.getElementById("filter-status-select").value;
+
+      let list = parcelsList.filter(p => {
+        const matchSearch = String(p.trackingNumber || "").toLowerCase().includes(searchVal) ||
+                            String(p.recipientName || "").toLowerCase().includes(searchVal) ||
+                            String(p.senderName || "").toLowerCase().includes(searchVal);
+        const matchStatus = (statusFilter === "all") || (p.status === statusFilter);
+        return matchSearch && matchStatus;
+      });
+
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="state-empty">
+              <div class="state-empty-icon">📭</div>
+              <p>Không có kiện hàng nào phù hợp với điều kiện lọc.</p>
+            </td>
+          </tr>
+        `;
+        syncSelectAll();
+        return;
+      }
+
+      const safe = (value) => PP_UTILS.escapeHTML(value);
+
+      tbody.innerHTML = list.map(p => {
+        const rawAddress = String(p.deliveryAddress || "");
+        const shortAddress = rawAddress.length > 60 ? `${rawAddress.slice(0, 60)}…` : rawAddress;
+        return `
+          <tr>
+            <td><input type="checkbox" class="row-select-chk" value="${safe(p.trackingNumber)}" aria-label="Chọn bưu kiện ${safe(p.trackingNumber)}"></td>
+            <td><strong style="color: var(--primary);">${safe(p.trackingNumber)}</strong></td>
+            <td style="font-size: 0.85rem;">${safe(p.senderName)}</td>
+            <td>
+              <div style="font-weight: 700; font-size: 0.9rem;">${safe(p.recipientName)}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">${safe(shortAddress)}</div>
+            </td>
+            <td>${getStatusBadge(p.status, p.statusLabel)}</td>
+            <td style="font-size: 0.85rem;">${p.driverName ? safe(p.driverName) : '<span style="color: var(--text-muted);">Chưa gán</span>'}</td>
+            <td style="font-size: 0.85rem;">${safe(p.estimatedDelivery)}</td>
+            <td style="text-align: right;">
+              <button type="button" class="btn btn-outline btn-sm" data-tracking="${safe(p.trackingNumber)}" aria-label="Đổi trạng thái bưu kiện ${safe(p.trackingNumber)}">
+                ✏️ Đổi Trạng Thái (U)
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      syncSelectAll();
+    }
+
+    function filterParcelsTable() {
+      renderParcelsTable();
+    }
+
+    function resetFilters() {
+      document.getElementById("admin-search-input").value = "";
+      document.getElementById("filter-status-select").value = "all";
+      renderParcelsTable();
+    }
+
+    function toggleSelectAll(master) {
+      const boxes = document.querySelectorAll(".row-select-chk");
+      boxes.forEach(box => { box.checked = master.checked; });
+      syncSelectAll();
+    }
+
+    function syncSelectAll() {
+      const master = document.getElementById("chk-select-all");
+      if (!master) return;
+      const boxes = Array.from(document.querySelectorAll(".row-select-chk"));
+      const checkedCount = boxes.filter(box => box.checked).length;
+      master.checked = boxes.length > 0 && checkedCount === boxes.length;
+      master.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
+    }
+
+    function clearStatusError() {
+      const errorEl = document.getElementById("edit-audit-error");
+      errorEl.textContent = "";
+      errorEl.style.display = "none";
+      document.getElementById("edit-audit-reason").removeAttribute("aria-invalid");
+    }
+
+    function showStatusError(message) {
+      const errorEl = document.getElementById("edit-audit-error");
+      const reasonEl = document.getElementById("edit-audit-reason");
+      errorEl.textContent = message;
+      errorEl.style.display = "block";
+      reasonEl.setAttribute("aria-invalid", "true");
+      reasonEl.focus();
+    }
+
+    function openStatusModal(tracking) {
+      const p = parcelsList.find(item => item.trackingNumber === tracking);
+      if (!p) {
+        showToast("Không tìm thấy bưu kiện cần cập nhật.", "danger");
+        return;
+      }
+
+      clearStatusError();
+      statusSubmitting = false;
+      document.getElementById("btn-save-status").disabled = false;
+
+      editTargets = [p.trackingNumber];
+      document.getElementById("edit-parcel-id").value = p.trackingNumber;
+      document.getElementById("edit-tracking-label").textContent = "Mã Vận Đơn";
+      document.getElementById("edit-tracking-display").value = `${p.trackingNumber} (${p.recipientName})`;
+      document.getElementById("edit-new-status").value = p.status;
+      document.getElementById("modal-status-title").textContent = "✏️ Cập Nhật Trạng Thái Bưu Kiện (U)";
+      document.getElementById("edit-audit-reason").value = "";
+
+      openModal("modal-change-status");
+    }
+
+    function openBulkUpdateModal() {
+      const selected = Array.from(document.querySelectorAll(".row-select-chk:checked")).map(box => box.value);
+      if (selected.length === 0) {
+        showToast("Vui lòng tích chọn ít nhất 1 kiện hàng để cập nhật hàng loạt!", "warning");
+        return;
+      }
+
+      clearStatusError();
+      statusSubmitting = false;
+      document.getElementById("btn-save-status").disabled = false;
+
+      editTargets = selected;
+      document.getElementById("edit-parcel-id").value = selected[0];
+      document.getElementById("edit-tracking-label").textContent = `Danh Sách Mã Vận Đơn (${selected.length})`;
+      document.getElementById("edit-tracking-display").value = selected.join(", ");
+      document.getElementById("edit-new-status").value = "in_transit";
+      document.getElementById("modal-status-title").textContent = `⚡ Cập Nhật Trạng Thái Hàng Loạt (${selected.length} bưu kiện)`;
+      document.getElementById("edit-audit-reason").value = "";
+
+      openModal("modal-change-status");
+    }
+
+    function handleUpdateStatusSubmit(e) {
+      e.preventDefault();
+      if (statusSubmitting) return;
+
+      const newStatus = document.getElementById("edit-new-status").value;
+      const reason = document.getElementById("edit-audit-reason").value.trim();
+      const targets = editTargets.length > 0
+        ? editTargets.slice()
+        : [document.getElementById("edit-parcel-id").value].filter(Boolean);
+
+      if (!STATUS_LABELS[newStatus]) {
+        showStatusError("Trạng thái nghiệp vụ không hợp lệ. Vui lòng chọn lại.");
+        return;
+      }
+      if (reason.length < 5) {
+        showStatusError("Vui lòng nhập lý do can thiệp tối thiểu 5 ký tự để lưu vết kiểm toán.");
+        return;
+      }
+      if (targets.length === 0) {
+        showStatusError("Không xác định được bưu kiện cần cập nhật.");
+        return;
+      }
+
+      const saveBtn = document.getElementById("btn-save-status");
+      statusSubmitting = true;
+      saveBtn.disabled = true;
+
+      try {
+        parcelsList = window.PP_DATA.getParcels();
+        const events = window.PP_DATA.getTrackingEvents();
+        const now = PP_UTILS.now();
+        const updated = [];
+
+        targets.forEach(tracking => {
+          const idx = parcelsList.findIndex(p => p.trackingNumber === tracking);
+          if (idx === -1) return;
+          if (parcelsList[idx].status === newStatus) return;
+
+          parcelsList[idx].status = newStatus;
+          parcelsList[idx].statusLabel = STATUS_LABELS[newStatus];
+          if (newStatus === "delivered") {
+            parcelsList[idx].deliveredAt = now;
+          }
+
+          if (!Array.isArray(events[tracking])) events[tracking] = [];
+          events[tracking].push({
+            time: now,
+            location: "Can thiệp quản trị hệ thống",
+            status: `Cập nhật trạng thái: ${STATUS_LABELS[newStatus]}`,
+            description: reason,
+            type: "admin"
+          });
+
+          logAuditTrail("UPDATE_PARCEL_STATUS", tracking, `Chuyển sang ${STATUS_LABELS[newStatus]}. Lý do: ${reason}`);
+          updated.push(tracking);
+        });
+
+        if (updated.length === 0) {
+          closeModal("modal-change-status");
+          showToast("Các bưu kiện đã ở trạng thái này, không có thay đổi nào được ghi nhận.", "info");
+          return;
+        }
+
+        window.PP_DATA.saveParcels(parcelsList);
+        window.PP_DATA.saveTrackingEvents(events);
+
+        closeModal("modal-change-status");
+        showToast(
+          updated.length === 1
+            ? `Đã cập nhật bưu kiện ${updated[0]} thành: ${STATUS_LABELS[newStatus]}.`
+            : `Đã cập nhật ${updated.length} bưu kiện thành: ${STATUS_LABELS[newStatus]}.`,
+          "success"
+        );
+        renderParcelsTable();
+        updateMetricCounts();
+        renderAuditLogs();
+      } finally {
+        statusSubmitting = false;
+        saveBtn.disabled = false;
+      }
+    }
+
+    function renderAuditLogs() {
+      const tbody = document.getElementById("audit-log-tbody");
+      const badge = document.getElementById("audit-count-badge");
+      const logs = window.PP_DATA.getAuditLogs();
+
+      badge.textContent = `${logs.length} bản ghi`;
+
+      if (!Array.isArray(logs) || logs.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="state-empty">
+              <div class="state-empty-icon">🧾</div>
+              <p>Chưa có thay đổi nào được ghi nhận. Nhật ký sẽ xuất hiện sau khi bạn cập nhật trạng thái.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const safe = (value) => PP_UTILS.escapeHTML(value);
+      tbody.innerHTML = logs.slice(0, 8).map(log => `
+        <tr>
+          <td style="font-size: 0.8rem; white-space: nowrap;">${safe(log.timestamp)}</td>
+          <td style="font-size: 0.85rem;">${safe(log.actor)}</td>
+          <td style="font-size: 0.85rem;">${safe(AUDIT_ACTION_LABELS[log.action] || log.action)}</td>
+          <td style="font-size: 0.85rem;"><strong>${safe(log.entityId)}</strong></td>
+          <td style="font-size: 0.8rem; color: var(--text-muted);">${safe(log.detail)}</td>
+        </tr>
+      `).join("");
+    }
+  </script>
+</body>
+</html>
