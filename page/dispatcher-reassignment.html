@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phân Công Lại Tài Xế - ParcelPulse Điều Phối</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-container">
+      <a href="../index.html" class="brand-logo">🎛️</a>
+      <div class="brand-title">
+        ParcelPulse
+        <span>Điều Phối Viên Trung Tâm Hub</span>
+      </div>
+    </div>
+
+    <button class="menu-toggle">☰</button>
+
+    <ul class="nav-links">
+      <li><a href="dispatcher-operations-dashboard.html" class="nav-link">📊 Dashboard Vận Hành</a></li>
+      <li><a href="dispatcher-exception-queue.html" class="nav-link">⚠️ Hàng Đợi Ngoại Lệ</a></li>
+      <li><a href="dispatcher-reassignment.html" class="nav-link active">🔄 Phân Công Lại Tài Xế</a></li>
+      <li><a href="../index.html" class="nav-link">🔄 Đổi Vai Trò</a></li>
+    </ul>
+
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" onclick="toggleTheme()">🌓</button>
+      <div class="user-profile-badge" id="header-user-badge"></div>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">🔄 Điều Chuyển & Phân Công Lại Tài Xế (AI Matching)</h1>
+        <p class="page-subtitle">Tối ưu hóa nguồn lực tài xế lân cận khi phát sinh hỏng xe, tắc đường hoặc quá tải tuyến</p>
+      </div>
+    </div>
+
+    <div class="grid-cols-2">
+
+      <!-- Left Column: Điều chuyển bưu kiện (C/U) + AI Matching -->
+      <div>
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title">📦 Chọn Kiện Hàng Cần Điều Phối Lại</h3>
+            <span class="badge badge-pending">Thao tác C/U</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Kiện Hàng Ngoại Lệ Cần Chuyển Tuyến <span class="required">*</span></label>
+            <select id="reassign-parcel-select" class="form-control" onchange="updateSelectedParcelInfo(this.value)">
+              <!-- Loaded by JS -->
+            </select>
+          </div>
+
+          <!-- Parcel Current Status Banner -->
+          <div id="parcel-current-status-box" style="background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius-md); border-left: 3px solid var(--accent); margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong id="box-tracking-id" style="color: var(--primary);">PP-2024-00124</strong>
+              <span id="box-current-driver" class="badge badge-out_for_delivery">Tài xế cũ: Trần Văn Đức</span>
+            </div>
+            <p id="box-address" style="font-size: 0.85rem; margin-top: 0.35rem; color: var(--text-main);">
+              Địa chỉ: Số 15 Ngõ 68 Cầu Giấy, Quan Hoa, Cầu Giấy
+            </p>
+            <p id="box-reason" style="font-size: 0.8rem; color: var(--danger); margin-top: 0.25rem;">
+              ⚠️ Lý do chuyển: Khách vắng mặt buổi sáng, yêu cầu dời giao ca chiều sau 18:00
+            </p>
+          </div>
+
+          <!-- FEATURE AI-3: SMART DRIVER MATCHING -->
+          <div class="ai-container">
+            <div class="ai-header">
+              <span class="ai-badge">
+                <span class="sparkle">✨</span> AI-3: Smart Driver Matcher
+              </span>
+              <button class="btn btn-accent btn-sm" onclick="runAIDriverMatching()">
+                ⚡ AI Đề Xuất Tài Xế Phù Hợp Nhất
+              </button>
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Mô hình thuật toán đánh giá khoảng cách GPS hiện tại, dung lượng thùng xe còn trống và tỷ lệ giao đúng hẹn của các tài xế lân cận.
+            </p>
+
+            <div id="ai-match-loading" class="ai-processing" style="display: none;">
+              <div class="ai-spinner"></div>
+              <p style="font-size: 0.85rem; font-weight: 600;">Đang quét tọa độ GPS 12 tài xế trong bán kính 3km...</p>
+            </div>
+
+            <!-- AI Candidates Result -->
+            <div id="ai-match-result" class="ai-result-box" style="display: none;">
+              <div class="ai-explanation">
+                <strong>💡 Kết quả phân tích:</strong>
+                <p style="margin-top: 0.25rem;">
+                  Đã tìm thấy <strong>3 tài xế</strong> có lộ trình đi qua khu vực Cầu Giấy trong khung giờ 17:30 - 19:00.
+                </p>
+              </div>
+
+              <div id="driver-candidates-list" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right Column: Lịch sử các ca điều phối hôm nay (R/D) -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">📋 Lịch Sử Điều Phối Lại Ca Hôm Nay (R/D)</h3>
+            <span class="badge badge-delivered" id="reassign-count-badge">0 lượt chuyển</span>
+          </div>
+
+          <div id="reassign-history-list" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>ParcelPulse - CSE122 Tối ưu hóa phân công lại nguồn lực giao nhận chặng cuối</p>
+  </footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    let reassignHistory = [
+      {
+        id: "REASS-01",
+        trackingNumber: "PP-2024-00127",
+        fromDriver: "Trần Văn Đức (ROUTE-HN-04)",
+        toDriver: "Vũ Minh Tuấn (ROUTE-HN-05)",
+        reason: "Khách đi công tác, hẹn lại ca chiều mai",
+        timestamp: "2024-10-22 11:15",
+        status: "Đã chuyển giao"
+      }
+    ];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      populateParcels();
+      renderHistory();
+    });
+
+    function populateParcels() {
+      const select = document.getElementById("reassign-parcel-select");
+      const parcels = window.PP_DATA.getParcels();
+
+      select.innerHTML = parcels.map(p => `
+        <option value="${p.trackingNumber}">${p.trackingNumber} - ${p.recipientName} (${p.statusLabel})</option>
+      `).join("");
+
+      if (parcels.length > 0) {
+        updateSelectedParcelInfo(parcels[1] ? parcels[1].trackingNumber : parcels[0].trackingNumber);
+        select.value = parcels[1] ? parcels[1].trackingNumber : parcels[0].trackingNumber;
+      }
+    }
+
+    function updateSelectedParcelInfo(tracking) {
+      const parcels = window.PP_DATA.getParcels();
+      const p = parcels.find(item => item.trackingNumber === tracking);
+      if (!p) return;
+
+      document.getElementById("box-tracking-id").textContent = p.trackingNumber;
+      document.getElementById("box-current-driver").textContent = `Tài xế hiện tại: ${p.driverName || "Chưa gán"}`;
+      document.getElementById("box-address").textContent = `Địa chỉ: ${p.deliveryAddress}`;
+      document.getElementById("box-reason").textContent = `Trạng thái: ${p.statusLabel} • Ghi chú: ${p.notes || "Không có"}`;
+
+      document.getElementById("ai-match-result").style.display = "none";
+    }
+
+    // AI-3 Driver Matching Simulation
+    function runAIDriverMatching() {
+      const loading = document.getElementById("ai-match-loading");
+      const result = document.getElementById("ai-match-result");
+
+      loading.style.display = "block";
+      result.style.display = "none";
+
+      setTimeout(() => {
+        loading.style.display = "none";
+        result.style.display = "block";
+
+        const candidates = [
+          {
+            name: "Vũ Minh Tuấn",
+            phone: "0977112233",
+            vehicle: "Yamaha Sirius 29X5-345.12",
+            distance: "0.8 km",
+            load: "4/15 đơn còn lại",
+            matchScore: "98%",
+            reason: "Đang có 1 điểm dừng tại Phố Quan Hoa cách đó 300m, thời gian trống phù hợp.",
+            best: true
+          },
+          {
+            name: "Hoàng Văn Nam",
+            phone: "0934112233",
+            vehicle: "Honda AirBlade 29M1-123.45",
+            distance: "1.9 km",
+            load: "2/12 đơn còn lại",
+            matchScore: "86%",
+            reason: "Sắp hoàn tất ca sớm, có thể nhận thêm 2-3 đơn bù chỉ tiêu.",
+            best: false
+          },
+          {
+            name: "Đỗ Quốc Việt",
+            phone: "0965334455",
+            vehicle: "Honda Wave 29H1-999.00",
+            distance: "2.5 km",
+            load: "7/18 đơn còn lại",
+            matchScore: "74%",
+            reason: "Tuyến giao Thanh Xuân hơi xa so với điểm giao Cầu Giấy.",
+            best: false
+          }
+        ];
+
+        const listEl = document.getElementById("driver-candidates-list");
+        listEl.innerHTML = candidates.map(c => `
+          <div style="background: var(--bg-main); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <strong style="font-size: 0.95rem;">${c.name}</strong>
+                <span class="badge ${c.best ? 'badge-delivered' : 'badge-in_transit'}">Tương thích: ${c.matchScore}</span>
+                ${c.best ? `<span class="badge badge-delivered" style="background: var(--accent); color: white;">Khuyên dùng</span>` : ""}
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
+                📞 ${c.phone} • Cách: <strong>${c.distance}</strong> • Tải ca: ${c.load}
+              </div>
+              <p style="font-size: 0.8rem; color: var(--text-main); margin-top: 0.25rem;">
+                💡 <em>${c.reason}</em>
+              </p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="confirmReassign('${c.name}')">
+              Chọn Tài Xế Này
+            </button>
+          </div>
+        `).join("");
+
+      }, 1500);
+    }
+
+    function confirmReassign(newDriverName) {
+      const tracking = document.getElementById("reassign-parcel-select").value;
+      let parcels = window.PP_DATA.getParcels();
+      const pIdx = parcels.findIndex(p => p.trackingNumber === tracking);
+
+      let oldDriver = "Trần Văn Đức";
+      if (pIdx !== -1) {
+        oldDriver = parcels[pIdx].driverName || "Chưa có";
+        parcels[pIdx].driverName = newDriverName;
+        parcels[pIdx].status = "in_transit";
+        parcels[pIdx].statusLabel = "Đang chuyển giao";
+        window.PP_DATA.saveParcels(parcels);
+      }
+
+      // Add to history (C)
+      const newRecord = {
+        id: "REASS-" + Date.now(),
+        trackingNumber: tracking,
+        fromDriver: oldDriver,
+        toDriver: newDriverName,
+        reason: "Điều phối AI tối ưu lộ trình",
+        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + " Hôm nay",
+        status: "Đã phân công lại"
+      };
+      reassignHistory.unshift(newRecord);
+
+      showToast(`Đã điều chuyển bưu kiện ${tracking} cho tài xế ${newDriverName}!`, "success");
+      updateSelectedParcelInfo(tracking);
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const listEl = document.getElementById("reassign-history-list");
+      document.getElementById("reassign-count-badge").textContent = `${reassignHistory.length} lượt`;
+
+      if (reassignHistory.length === 0) {
+        listEl.innerHTML = `
+          <div class="state-empty" style="padding: 2rem 0;">
+            <div class="state-empty-icon">🔄</div>
+            <p>Chưa có lượt phân công lại nào hôm nay.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = reassignHistory.map(item => `
+        <div class="card" style="padding: 1rem; background: var(--bg-main); border: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.35rem;">
+            <strong style="color: var(--primary);">${item.trackingNumber}</strong>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">${item.timestamp}</span>
+          </div>
+          <div style="font-size: 0.85rem; margin-bottom: 0.35rem;">
+            Tài xế cũ: <span style="color: var(--danger);">${item.fromDriver}</span> ➔ Mới: <strong style="color: var(--success);">${item.toDriver}</strong>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Lý do: "${item.reason}"
+          </p>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+            <span class="badge badge-delivered">${item.status}</span>
+            <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteHistory('${item.id}')">🗑️ Hủy Lượt Chuyển (D)</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function deleteHistory(id) {
+      if (confirm("Bạn có muốn hủy bản ghi điều chuyển này không?")) {
+        reassignHistory = reassignHistory.filter(h => h.id !== id);
+        showToast("Đã hủy bản ghi điều chuyển", "info");
+        renderHistory();
+      }
+    }
+  </script>
+</body>
+</html>
