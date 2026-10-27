@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi Tiết Điểm Dừng - ParcelPulse Tài Xế</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-container">
+      <a href="../index.html" class="brand-logo">🚚</a>
+      <div class="brand-title">
+        ParcelPulse
+        <span>Nhân Viên Giao Hàng</span>
+      </div>
+    </div>
+
+    <button type="button" class="menu-toggle" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="main-nav">☰</button>
+
+    <nav class="main-nav" aria-label="Điều hướng chính">
+      <ul class="nav-links" id="main-nav">
+        <li><a href="driver-route-stops.html" class="nav-link">📋 Danh Sách Điểm Dừng</a></li>
+        <li><a href="driver-stop-detail.html" class="nav-link active" aria-current="page">📦 Chi Tiết Điểm Dừng</a></li>
+        <li><a href="driver-exception-create.html" class="nav-link">⚠️ Báo Cáo Ngoại Lệ</a></li>
+        <li><a href="../index.html" class="nav-link">🔄 Đổi Vai Trò</a></li>
+      </ul>
+    </nav>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline btn-sm" onclick="toggleTheme()" aria-label="Chuyển chế độ sáng tối" aria-pressed="false">🌓</button>
+      <div class="user-profile-badge" id="header-user-badge"></div>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <div class="page-header">
+      <div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+          <a href="driver-route-stops.html" style="color: var(--primary);">← Quay Lại Danh Sách Lộ Trình</a>
+        </div>
+        <h1 class="page-title">📦 Chi Tiết Điểm Dừng & Xác Thực Giao Hàng (POD)</h1>
+      </div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button type="button" class="btn btn-outline" onclick="callCustomer()">📞 Gọi Khách Hàng</button>
+        <button type="button" class="btn btn-outline" onclick="openMapNavigation()">🗺️ Chỉ Đường (Google Maps)</button>
+      </div>
+    </div>
+
+    <!-- Stop selection -->
+    <div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <label for="select-active-stop" style="font-weight: 700; font-size: 0.9rem;">Chọn Điểm Dừng:</label>
+        <select id="select-active-stop" class="form-control" style="max-width: 420px;" aria-describedby="stop-select-help">
+          <!-- Rendered by JS -->
+        </select>
+        <span class="form-help" id="stop-select-help">Danh sách được sắp xếp theo thứ tự lộ trình đã phân công.</span>
+      </div>
+    </div>
+
+    <div class="grid-cols-2">
+
+      <!-- Left Column: Recipient, parcel, preferences -->
+      <div>
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h2 class="card-title">👤 Thông Tin Người Nhận</h2>
+            <span id="detail-stop-badge"></span>
+          </div>
+
+          <div style="font-size: 0.95rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">HỌ VÀ TÊN</span>
+              <strong id="detail-recipient-name" style="font-size: 1.15rem;">—</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">SỐ ĐIỆN THOẠI</span>
+              <strong id="detail-recipient-phone" style="font-size: 1.1rem; color: var(--primary);">—</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">ĐỊA CHỈ GIAO TẬN NƠI</span>
+              <p id="detail-address" style="font-weight: 600; margin-top: 0.2rem;">—</p>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">KHUNG GIỜ HẸN TRƯỚC</span>
+              <span id="detail-time-window" class="badge badge-in_transit">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h2 class="card-title">📦 Thông Số Gói Hàng</h2>
+            <strong id="detail-parcel-id" style="color: var(--primary);">—</strong>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">TIỀN THU HỘ (COD)</span>
+              <strong id="detail-cod" style="font-size: 1.25rem; color: var(--accent);">—</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">KHỐI LƯỢNG / KÍCH THƯỚC</span>
+              <span id="detail-weight">—</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+            <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">GHI CHÚ ĐÓNG GÓI TỪ NGƯỜI GỬI</span>
+            <p id="detail-sender-notes" style="font-size: 0.85rem; margin-top: 0.25rem;">—</p>
+          </div>
+        </div>
+
+        <!-- Recipient delivery preferences -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">⚙️ Tùy Chọn Giao Hàng Của Khách</h2>
+            <span id="preference-badge" class="badge badge-returned">Chưa thiết lập</span>
+          </div>
+
+          <div id="preference-content">
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Đang tải tùy chọn giao hàng...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Delivery actions and notes -->
+      <div>
+
+        <div class="card" style="margin-bottom: 1.5rem; border: 2px solid var(--border-color);">
+          <div class="card-header">
+            <h2 class="card-title">⚡ Thao Tác Nghiệp Vụ Tại Điểm Dừng</h2>
+          </div>
+
+          <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Xác nhận kết quả sau khi đã có mặt tại địa chỉ và tiếp cận người nhận.
+          </p>
+
+          <div id="action-status-note" role="status" aria-live="polite" style="font-size: 0.85rem; padding: 0.75rem 0.9rem; border-radius: var(--radius-md); background: var(--bg-subtle); color: var(--text-main); margin-bottom: 1.25rem;">
+            Đang tải trạng thái điểm dừng...
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+
+            <button type="button" id="btn-open-pod" class="btn btn-success btn-lg" style="width: 100%; justify-content: center;" onclick="openPodModal()">
+              ✅ Giao Hàng Thành Công (Chụp Ảnh / Ký Nhận POD)
+            </button>
+
+            <button type="button" id="btn-report-exception" class="btn btn-outline btn-lg" style="width: 100%; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.4);" onclick="goToCreateException()">
+              ⚠️ Khách Vắng / Sai Địa Chỉ (Báo Ngoại Lệ)
+            </button>
+
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">📝 Cập Nhật Ghi Chú Hiện Trường (U)</h2>
+          </div>
+
+          <div class="form-group" id="group-driver-notes">
+            <label class="form-label" for="driver-custom-notes">Ghi Chú Của Tài Xế Cho Điểm Dừng Này</label>
+            <textarea id="driver-custom-notes" class="form-control" placeholder="Ví dụ: Đã gọi lúc 10h15 không nghe máy, gửi bảo vệ tòa nhà nếu có sự đồng ý..." maxlength="500" aria-describedby="notes-help notes-error"></textarea>
+            <div style="display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+              <div class="form-help" id="notes-help">Ghi chú được lưu cùng điểm dừng và ghi vào nhật ký kiểm toán.</div>
+              <span class="form-help" id="notes-counter" aria-hidden="true">0/500</span>
+            </div>
+            <div id="notes-error" class="form-error" role="alert"></div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveDriverNotes()">💾 Lưu Ghi Chú</button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Modal e-POD -->
+  <div class="modal-backdrop" id="modal-pod">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="pod-modal-title" aria-describedby="pod-modal-desc" tabindex="-1">
+      <div class="modal-header">
+        <h3 id="pod-modal-title" style="font-weight: 800; color: var(--success);">📸 Xác Thực Giao Hàng Thành Công (e-POD)</h3>
+        <button type="button" class="btn btn-outline btn-sm" aria-label="Đóng biểu mẫu e-POD" onclick="closeModal('modal-pod')">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="form-help" id="pod-modal-desc" style="margin-bottom: 1rem;">
+          Xác thực đúng người nhận bằng họ tên, 4 số cuối điện thoại/OTP và ảnh chụp bưu kiện tại hiện trường.
+        </p>
+
+        <div id="pod-context" style="font-size: 0.85rem; background: var(--bg-subtle); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; margin-bottom: 1.25rem;">
+          —
+        </div>
+
+        <form id="form-pod" novalidate>
+          <div class="form-group" id="group-pod-receiver">
+            <label class="form-label" for="pod-receiver-name">Người Ký Nhận Hàng <span class="required">*</span></label>
+            <input type="text" id="pod-receiver-name" class="form-control" placeholder="Họ tên người trực tiếp nhận hàng" autocomplete="name" minlength="2" maxlength="80" required aria-describedby="pod-name-help pod-receiver-error">
+            <div class="form-help" id="pod-name-help">Có thể là người nhận, người thân hoặc lễ tân được ủy quyền.</div>
+            <div id="pod-receiver-error" class="form-error" role="alert"></div>
+          </div>
+
+          <div class="form-group" id="group-pod-otp">
+            <label class="form-label" for="pod-otp">Mã Xác Nhận OTP / 4 Số Cuối Điện Thoại <span class="required">*</span></label>
+            <input type="text" id="pod-otp" class="form-control" placeholder="Nhập 4 chữ số" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="one-time-code" required aria-describedby="pod-otp-help pod-otp-error">
+            <div class="form-help" id="pod-otp-help">Nhập 4 số cuối số điện thoại người nhận hoặc mã OTP 4 số do khách cung cấp.</div>
+            <div id="pod-otp-error" class="form-error" role="alert"></div>
+          </div>
+
+          <div class="form-group" id="group-pod-image">
+            <label class="form-label" for="pod-image">Ảnh Chụp Bưu Kiện / Hiện Trường <span class="required">*</span></label>
+            <input type="file" class="form-control" accept="image/png,image/jpeg,image/webp" id="pod-image" required aria-describedby="pod-image-help pod-image-error">
+            <div class="form-help" id="pod-image-help">Chấp nhận ảnh JPG, PNG hoặc WebP, dung lượng tối đa 2 MB.</div>
+            <div id="pod-image-error" class="form-error" role="alert"></div>
+            <div id="pod-preview" style="margin-top: 0.75rem; text-align: center;"></div>
+          </div>
+
+          <div class="form-group" id="pod-cod-group">
+            <label class="form-label" for="pod-collected-cod">Số Tiền COD Đã Thu Thực Tế</label>
+            <input type="text" id="pod-collected-cod" class="form-control" value="—" readonly style="background: var(--bg-subtle); font-weight: 700; color: var(--accent);">
+
+            <label style="display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 0.65rem; font-size: 0.85rem; cursor: pointer;">
+              <input type="checkbox" id="pod-cod-confirmed" aria-describedby="pod-cod-confirmed-error" style="margin-top: 0.2rem;">
+              <span>Tôi xác nhận đã thu đủ số tiền COD trên từ người nhận.</span>
+            </label>
+            <div id="pod-cod-confirmed-error" class="form-error" role="alert"></div>
+          </div>
+
+          <div class="modal-footer" style="padding: 1rem 0 0 0; background: none; border-top: none;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('modal-pod')">Hủy</button>
+            <button type="submit" class="btn btn-success" id="btn-confirm-pod">✅ Hoàn Tất Đơn Giao</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>ParcelPulse - CSE122 Chi tiết điểm dừng & Biên bản giao nhận điện tử (e-POD)</p>
+  </footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    const STOP_STATUS_META = {
+      completed: { label: "Đã giao thành công", badgeClass: "badge-delivered" },
+      pending: { label: "Đang chờ giao", badgeClass: "badge-out_for_delivery" },
+      exception: { label: "Có ngoại lệ", badgeClass: "badge-exception" }
+    };
+
+    const POD_FIELDS = [
+      { group: "group-pod-receiver", input: "pod-receiver-name", error: "pod-receiver-error" },
+      { group: "group-pod-otp", input: "pod-otp", error: "pod-otp-error" },
+      { group: "group-pod-image", input: "pod-image", error: "pod-image-error" },
+      { group: "pod-cod-group", input: "pod-cod-confirmed", error: "pod-cod-confirmed-error" }
+    ];
+
+    const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+    const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+    let currentStop = null;
+    let currentParcel = null;
+    let podPreviewUrl = null;
+    let podSubmitting = false;
+
+    document.addEventListener("DOMContentLoaded", initStopDetailPage);
+
+    function initStopDetailPage() {
+      const stops = getSortedStops();
+      const select = document.getElementById("select-active-stop");
+
+      if (stops.length === 0) {
+        select.disabled = true;
+        const option = new Option("Chưa có điểm dừng", "", true, true);
+        option.disabled = true;
+        select.appendChild(option);
+        renderEmptyState();
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const requestedStopId = params.get("stopId");
+      const requestedParcelId = params.get("parcelId");
+
+      let target = requestedStopId ? stops.find(stop => stop.id === requestedStopId) : null;
+
+      if (!target && requestedParcelId) {
+        target = stops.find(stop => String(stop.parcelId || "").toUpperCase() === requestedParcelId.toUpperCase());
+        if (!target) {
+          showToast("Bưu kiện này chưa được gán điểm dừng trong lộ trình hiện tại.", "warning");
+        }
+      }
+
+      if (!target) {
+        target = stops.find(stop => stop.status !== "completed") || stops[0];
+      }
+
+      populateStopSelect(stops, target.id);
+      select.addEventListener("change", () => loadStopDetail(select.value));
+
+      const notesInput = document.getElementById("driver-custom-notes");
+      notesInput.addEventListener("input", () => {
+        updateNotesCounter();
+        clearNotesError();
+      });
+
+      const receiverInput = document.getElementById("pod-receiver-name");
+      receiverInput.addEventListener("input", () => clearPodField("pod-receiver-name", "group-pod-receiver", "pod-receiver-error"));
+
+      const otpInput = document.getElementById("pod-otp");
+      otpInput.addEventListener("input", () => {
+        otpInput.value = otpInput.value.replace(/\D/g, "").slice(0, 4);
+        clearPodField("pod-otp", "group-pod-otp", "pod-otp-error");
+      });
+
+      document.getElementById("pod-image").addEventListener("change", previewPodImage);
+      document.getElementById("pod-cod-confirmed").addEventListener("change", () => {
+        clearPodField("pod-cod-confirmed", "pod-cod-group", "pod-cod-confirmed-error");
+      });
+      document.getElementById("form-pod").addEventListener("submit", handleConfirmPOD);
+
+      loadStopDetail(target.id);
+    }
+
+    function getSortedStops() {
+      return window.PP_DATA.getStops()
+        .slice()
+        .sort((a, b) => (Number(a.sequence) || 0) - (Number(b.sequence) || 0));
+    }
+
+    function getParcelForStop(stop) {
+      if (!stop) return null;
+      const parcels = window.PP_DATA.getParcels();
+      const parcelId = String(stop.parcelId || "");
+      return parcels.find(parcel =>
+        String(parcel.trackingNumber || "").toUpperCase() === parcelId.toUpperCase() ||
+        String(parcel.id || "").toUpperCase() === parcelId.toUpperCase()
+      ) || null;
+    }
+
+    function getStopStatusMeta(status) {
+      return STOP_STATUS_META[status] || {
+        label: status ? String(status) : "Không xác định",
+        badgeClass: "badge-pending"
+      };
+    }
+
+    function populateStopSelect(stops, selectedId) {
+      const select = document.getElementById("select-active-stop");
+      select.textContent = "";
+
+      stops.forEach(stop => {
+        const option = document.createElement("option");
+        const meta = getStopStatusMeta(stop.status);
+        option.value = stop.id;
+        option.textContent = `#${Number(stop.sequence) || 0} • ${stop.recipientName || "Chưa rõ"} • ${stop.parcelId || "—"} (${meta.label})`;
+        select.appendChild(option);
+      });
+
+      select.disabled = false;
+      if (selectedId && stops.some(stop => stop.id === selectedId)) {
+        select.value = selectedId;
+      }
+    }
+
+    function loadStopDetail(stopId) {
+      const stop = getSortedStops().find(item => item.id === stopId);
+      if (!stop) {
+        renderEmptyState();
+        return;
+      }
+
+      currentStop = stop;
+      currentParcel = getParcelForStop(stop);
+
+      const select = document.getElementById("select-active-stop");
+      if (select && select.value !== stop.id && Array.from(select.options).some(option => option.value === stop.id)) {
+        select.value = stop.id;
+      }
+
+      const recipientName = stop.recipientName || (currentParcel && currentParcel.recipientName) || "";
+      const recipientPhone = stop.recipientPhone || (currentParcel && currentParcel.recipientPhone) || "";
+      const address = stop.address || (currentParcel && currentParcel.deliveryAddress) || "";
+      const cod = Number(stop.codAmount != null ? stop.codAmount : (currentParcel ? currentParcel.codAmount : 0)) || 0;
+
+      setText("detail-recipient-name", recipientName || "—");
+      setText("detail-recipient-phone", recipientPhone || "—");
+      setText("detail-address", address || "—");
+      setText("detail-parcel-id", stop.parcelId || "—");
+      setText("detail-cod", formatVND(cod));
+
+      if (currentParcel) {
+        setText("detail-weight", `${currentParcel.weight || "—"} (${currentParcel.dimensions || "—"})`);
+        setText("detail-sender-notes", currentParcel.notes || "Không có ghi chú từ người gửi.");
+      } else {
+        setText("detail-weight", "—");
+        setText("detail-sender-notes", "Không tìm thấy thông tin bưu kiện.");
+      }
+
+      const timeWindowEl = document.getElementById("detail-time-window");
+      timeWindowEl.className = "badge badge-in_transit";
+      timeWindowEl.textContent = stop.timeWindow || "Chưa hẹn giờ";
+
+      renderStatusBadge(stop.status);
+      renderPreferences(stop.parcelId);
+      updateActionState(stop);
+      updateUrl(stop);
+
+      const notesInput = document.getElementById("driver-custom-notes");
+      notesInput.value = stop.notes || "";
+      updateNotesCounter();
+      clearNotesError();
+    }
+
+    function setText(id, value) {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.textContent = value == null || value === "" ? "—" : String(value);
+    }
+
+    function renderStatusBadge(status) {
+      const container = document.getElementById("detail-stop-badge");
+      container.textContent = "";
+
+      const meta = getStopStatusMeta(status);
+      const badge = document.createElement("span");
+      badge.className = `badge ${meta.badgeClass}`;
+      const dot = document.createElement("span");
+      dot.className = "badge-dot";
+      badge.append(dot, document.createTextNode(meta.label));
+      container.appendChild(badge);
+    }
+
+    function renderPreferences(parcelId) {
+      const content = document.getElementById("preference-content");
+      const badge = document.getElementById("preference-badge");
+      content.textContent = "";
+
+      const preference = window.PP_DATA.getPreferences().find(pref =>
+        String(pref.trackingNumber || "").toUpperCase() === String(parcelId || "").toUpperCase() ||
+        String(pref.parcelId || "").toUpperCase() === String(parcelId || "").toUpperCase()
+      );
+
+      if (!preference) {
+        badge.className = "badge badge-returned";
+        badge.textContent = "Chưa thiết lập";
+        const empty = document.createElement("p");
+        empty.style.cssText = "font-size: 0.85rem; color: var(--text-muted);";
+        empty.textContent = "Người nhận chưa thiết lập tùy chọn giao hàng cho bưu kiện này. Hãy gọi điện xác nhận trước khi giao.";
+        content.appendChild(empty);
+        return;
+      }
+
+      badge.className = "badge badge-in_transit";
+      badge.textContent = preference.updatedAt ? `Cập nhật ${preference.updatedAt}` : "Đã thiết lập";
+
+      const list = document.createElement("dl");
+      list.style.cssText = "display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.9rem;";
+
+      appendDefinition(list, "⏰ Khung giờ mong muốn", preference.preferredTimeLabel || preference.preferredTime);
+      appendDefinition(list, "📦 Cách gửi khi vắng nhà", preference.safeDropLabel || preference.safeDropLocation);
+      appendDefinition(list, "🏘️ Gửi hàng xóm", preference.allowNeighbor ? "Được phép gửi hàng xóm" : "Không cho phép gửi hàng xóm");
+      appendDefinition(list, "💬 Ghi chú của người nhận", preference.customNotes || "Không có ghi chú thêm.");
+
+      content.appendChild(list);
+    }
+
+    function appendDefinition(list, term, value) {
+      const item = document.createElement("div");
+      item.style.cssText = "border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem;";
+
+      const dt = document.createElement("dt");
+      dt.style.cssText = "color: var(--text-muted); font-size: 0.75rem; margin-bottom: 0.15rem;";
+      dt.textContent = term;
+
+      const dd = document.createElement("dd");
+      dd.style.cssText = "font-weight: 600; white-space: pre-wrap;";
+      dd.textContent = value || "—";
+
+      item.append(dt, dd);
+      list.appendChild(item);
+    }
+
+    function updateActionState(stop) {
+      const podButton = document.getElementById("btn-open-pod");
+      const exceptionButton = document.getElementById("btn-report-exception");
+
+      if (stop.status === "completed") {
+        const receiver = stop.pod && stop.pod.receiverName ? stop.pod.receiverName : "người nhận";
+        const time = stop.actualDeliveryTime ? ` lúc ${stop.actualDeliveryTime}` : "";
+        setActionNote("success", `✅ Điểm dừng đã hoàn tất${time}. Biên bản e-POD được xác nhận bởi ${receiver}.`);
+
+        podButton.disabled = true;
+        podButton.textContent = "✅ Điểm Dừng Đã Hoàn Tất";
+        exceptionButton.disabled = true;
+        return;
+      }
+
+      podButton.disabled = false;
+      podButton.textContent = "✅ Giao Hàng Thành Công (Chụp Ảnh / Ký Nhận POD)";
+      exceptionButton.disabled = false;
+
+      if (stop.status === "exception") {
+        setActionNote("warning", "⚠️ Điểm dừng đang có ngoại lệ mở. Nếu khách đã nhận hàng thành công, hãy xác nhận e-POD để hệ thống tự động đóng ngoại lệ liên quan.");
+      } else {
+        setActionNote("info", "Sẵn sàng xác thực giao hàng. Hãy kiểm tra đúng người nhận, thu đủ COD và chụp ảnh bưu kiện trước khi hoàn tất.");
+      }
+    }
+
+    function setActionNote(tone, message) {
+      const note = document.getElementById("action-status-note");
+      const tones = {
+        success: ["var(--success-light)", "var(--success)"],
+        warning: ["var(--warning-light)", "var(--warning)"],
+        info: ["var(--bg-subtle)", "var(--text-main)"]
+      };
+      const palette = tones[tone] || tones.info;
+      note.style.background = palette[0];
+      note.style.color = palette[1];
+      note.textContent = message;
+    }
+
+    function renderEmptyState() {
+      currentStop = null;
+      currentParcel = null;
+      setText("detail-recipient-name", "—");
+      setText("detail-recipient-phone", "—");
+      setText("detail-address", "—");
+      setText("detail-parcel-id", "—");
+      setText("detail-cod", "—");
+      setText("detail-weight", "—");
+      setText("detail-sender-notes", "Chưa có dữ liệu điểm dừng.");
+      document.getElementById("detail-stop-badge").textContent = "";
+      document.getElementById("detail-time-window").textContent = "—";
+      document.getElementById("preference-content").textContent = "Chưa có dữ liệu tùy chọn giao hàng.";
+      document.getElementById("btn-open-pod").disabled = true;
+      document.getElementById("btn-report-exception").disabled = true;
+      setActionNote("warning", "Chưa có điểm dừng nào trong lộ trình để thao tác. Vui lòng kiểm tra phân công tuyến.");
+    }
+
+    function updateUrl(stop) {
+      try {
+        const params = new URLSearchParams();
+        params.set("stopId", stop.id);
+        if (stop.parcelId) params.set("parcelId", stop.parcelId);
+        window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+      } catch (error) {
+        // file:// hoặc môi trường chặn history: không ảnh hưởng nghiệp vụ
+      }
+    }
+
+    function updateNotesCounter() {
+      const notes = document.getElementById("driver-custom-notes").value;
+      document.getElementById("notes-counter").textContent = `${notes.length}/500`;
+    }
+
+    function clearNotesError() {
+      const error = document.getElementById("notes-error");
+      error.textContent = "";
+      error.style.display = "none";
+      document.getElementById("group-driver-notes").classList.remove("has-error");
+      document.getElementById("driver-custom-notes").removeAttribute("aria-invalid");
+    }
+
+    function saveDriverNotes() {
+      if (!currentStop) {
+        showToast("Chưa chọn điểm dừng để lưu ghi chú.", "warning");
+        return;
+      }
+
+      const notesInput = document.getElementById("driver-custom-notes");
+      const notes = notesInput.value.trim();
+      const error = document.getElementById("notes-error");
+
+      if (notes.length > 500) {
+        error.textContent = "Ghi chú tối đa 500 ký tự.";
+        error.style.display = "block";
+        notesInput.setAttribute("aria-invalid", "true");
+        notesInput.focus();
+        return;
+      }
+
+      if (notes.length > 0 && notes.length < 3) {
+        error.textContent = "Ghi chú quá ngắn. Vui lòng nhập tối thiểu 3 ký tự hoặc để trống.";
+        error.style.display = "block";
+        notesInput.setAttribute("aria-invalid", "true");
+        notesInput.focus();
+        return;
+      }
+
+      clearNotesError();
+
+      const stops = window.PP_DATA.getStops();
+      const index = stops.findIndex(stop => stop.id === currentStop.id);
+      if (index === -1) {
+        showToast("Không tìm thấy điểm dừng để cập nhật. Vui lòng tải lại trang.", "danger");
+        return;
+      }
+
+      stops[index].notes = notes;
+      window.PP_DATA.saveStops(stops);
+      currentStop.notes = notes;
+      logAuditTrail("UPDATE_STOP_NOTES", currentStop.id, `Cập nhật ghi chú hiện trường cho ${currentStop.parcelId}: ${notes || "(đã xóa ghi chú)"}`);
+      showToast("Đã lưu ghi chú hiện trường và ghi nhật ký kiểm toán.", "success");
+    }
+
+    function openPodModal() {
+      if (!currentStop) {
+        showToast("Chưa chọn điểm dừng để xác nhận giao hàng.", "warning");
+        return;
+      }
+
+      if (currentStop.status === "completed") {
+        showToast("Điểm dừng này đã được xác nhận giao thành công.", "info");
+        return;
+      }
+
+      const cod = Number(currentStop.codAmount != null ? currentStop.codAmount : (currentParcel ? currentParcel.codAmount : 0)) || 0;
+      const recipientName = currentStop.recipientName || (currentParcel && currentParcel.recipientName) || "";
+
+      document.getElementById("form-pod").reset();
+      clearPodErrors();
+      resetPodPreview("Chưa chọn ảnh xác thực.");
+
+      const context = document.getElementById("pod-context");
+      context.textContent = `${recipientName || "Chưa rõ người nhận"} • ${currentStop.parcelId || "—"} • COD ${formatVND(cod)}`;
+
+      document.getElementById("pod-receiver-name").value = recipientName;
+      document.getElementById("pod-collected-cod").value = formatVND(cod);
+
+      const codGroup = document.getElementById("pod-cod-group");
+      const codCheckbox = document.getElementById("pod-cod-confirmed");
+      if (cod > 0) {
+        codGroup.style.display = "";
+        codCheckbox.setAttribute("aria-required", "true");
+      } else {
+        codGroup.style.display = "none";
+        codCheckbox.removeAttribute("aria-required");
+      }
+
+      openModal("modal-pod");
+    }
+
+    function previewPodImage(event) {
+      const input = event.target;
+      const file = input.files && input.files[0];
+      clearPodField("pod-image", "group-pod-image", "pod-image-error");
+
+      if (!file) {
+        resetPodPreview("Chưa chọn ảnh xác thực.");
+        return;
+      }
+
+      const validationMessage = validateImageFile(file);
+      if (validationMessage) {
+        input.value = "";
+        setPodFieldError("pod-image", "group-pod-image", "pod-image-error", validationMessage);
+        resetPodPreview("Ảnh không hợp lệ, vui lòng chọn ảnh khác.");
+        return;
+      }
+
+      if (podPreviewUrl) {
+        URL.revokeObjectURL(podPreviewUrl);
+      }
+      podPreviewUrl = URL.createObjectURL(file);
+
+      const preview = document.getElementById("pod-preview");
+      preview.textContent = "";
+
+      const image = document.createElement("img");
+      image.src = podPreviewUrl;
+      image.alt = `Ảnh xác thực giao hàng cho bưu kiện ${currentStop ? currentStop.parcelId : ""}`;
+      image.style.cssText = "max-height: 160px; max-width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color);";
+
+      const caption = document.createElement("p");
+      caption.className = "form-help";
+      caption.style.marginTop = "0.35rem";
+      caption.textContent = `${file.name} • ${formatFileSize(file.size)}`;
+
+      preview.append(image, caption);
+    }
+
+    function resetPodPreview(message) {
+      if (podPreviewUrl) {
+        URL.revokeObjectURL(podPreviewUrl);
+        podPreviewUrl = null;
+      }
+      const preview = document.getElementById("pod-preview");
+      preview.textContent = "";
+      if (!message) return;
+
+      const placeholder = document.createElement("p");
+      placeholder.className = "form-help";
+      placeholder.style.margin = "0";
+      placeholder.textContent = message;
+      preview.appendChild(placeholder);
+    }
+
+    function validateImageFile(file) {
+      if (!file || file.size === 0) {
+        return "Tệp ảnh rỗng hoặc không đọc được. Vui lòng chọn ảnh khác.";
+      }
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        return "Định dạng ảnh không hợp lệ. Chỉ chấp nhận JPG, PNG hoặc WebP.";
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        return "Ảnh vượt quá 2 MB. Vui lòng chụp lại hoặc nén ảnh trước khi tải lên.";
+      }
+      return "";
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+      return `${bytes} B`;
+    }
+
+    function clearPodField(inputId, groupId, errorId) {
+      const input = document.getElementById(inputId);
+      const group = document.getElementById(groupId);
+      const error = document.getElementById(errorId);
+      if (input) input.removeAttribute("aria-invalid");
+      if (group) group.classList.remove("has-error");
+      if (error) {
+        error.textContent = "";
+        error.style.display = "none";
+      }
+    }
+
+    function clearPodErrors() {
+      POD_FIELDS.forEach(field => clearPodField(field.input, field.group, field.error));
+    }
+
+    function setPodFieldError(inputId, groupId, errorId, message) {
+      const input = document.getElementById(inputId);
+      const group = document.getElementById(groupId);
+      const error = document.getElementById(errorId);
+      if (input) input.setAttribute("aria-invalid", "true");
+      if (group) group.classList.add("has-error");
+      if (error) {
+        error.textContent = message;
+        error.style.display = "block";
+      }
+    }
+
+    function handleConfirmPOD(event) {
+      event.preventDefault();
+
+      if (podSubmitting) return;
+
+      if (!currentStop) {
+        showToast("Không xác định được điểm dừng để xác nhận giao hàng.", "danger");
+        return;
+      }
+
+      clearPodErrors();
+
+      const receiverInput = document.getElementById("pod-receiver-name");
+      const otpInput = document.getElementById("pod-otp");
+      const imageInput = document.getElementById("pod-image");
+      const codCheckbox = document.getElementById("pod-cod-confirmed");
+      const receiverName = receiverInput.value.trim();
+      const otp = otpInput.value.trim();
+      const file = imageInput.files && imageInput.files[0];
+      const cod = Number(currentStop.codAmount != null ? currentStop.codAmount : (currentParcel ? currentParcel.codAmount : 0)) || 0;
+      const invalidInputs = [];
+
+      if (receiverName.length < 2) {
+        setPodFieldError("pod-receiver-name", "group-pod-receiver", "pod-receiver-error", "Vui lòng nhập họ tên người ký nhận (tối thiểu 2 ký tự).");
+        invalidInputs.push(receiverInput);
+      } else if (receiverName.length > 80) {
+        setPodFieldError("pod-receiver-name", "group-pod-receiver", "pod-receiver-error", "Họ tên người ký nhận tối đa 80 ký tự.");
+        invalidInputs.push(receiverInput);
+      }
+
+      if (!/^\d{4}$/.test(otp)) {
+        setPodFieldError("pod-otp", "group-pod-otp", "pod-otp-error", "Vui lòng nhập đúng 4 chữ số xác nhận.");
+        invalidInputs.push(otpInput);
+      }
+
+      if (!file) {
+        setPodFieldError("pod-image", "group-pod-image", "pod-image-error", "Bắt buộc chọn ảnh chụp bưu kiện hoặc hiện trường.");
+        invalidInputs.push(imageInput);
+      } else {
+        const validationMessage = validateImageFile(file);
+        if (validationMessage) {
+          setPodFieldError("pod-image", "group-pod-image", "pod-image-error", validationMessage);
+          invalidInputs.push(imageInput);
+        }
+      }
+
+      if (cod > 0 && !codCheckbox.checked) {
+        setPodFieldError("pod-cod-confirmed", "pod-cod-group", "pod-cod-confirmed-error", "Vui lòng xác nhận đã thu đủ tiền COD trước khi hoàn tất.");
+        invalidInputs.push(codCheckbox);
+      }
+
+      if (invalidInputs.length > 0) {
+        showToast("Vui lòng kiểm tra các trường được đánh dấu đỏ trong biên bản e-POD.", "warning");
+        invalidInputs[0].focus();
+        return;
+      }
+
+      const submitButton = document.getElementById("btn-confirm-pod");
+      const submitLabel = submitButton.textContent;
+      podSubmitting = true;
+      submitButton.disabled = true;
+      submitButton.textContent = "⏳ Đang lưu biên bản e-POD...";
+
+      try {
+        const stops = window.PP_DATA.getStops();
+        const stopIndex = stops.findIndex(stop => stop.id === currentStop.id);
+        if (stopIndex === -1) {
+          throw new Error("Không tìm thấy điểm dừng. Vui lòng tải lại trang.");
+        }
+
+        const targetStop = stops[stopIndex];
+        if (targetStop.status === "completed") {
+          throw new Error("Điểm dừng đã được xác nhận giao thành công trước đó.");
+        }
+
+        const tracking = targetStop.parcelId || (currentParcel && currentParcel.trackingNumber);
+        if (!tracking) {
+          throw new Error("Không xác định được mã bưu kiện của điểm dừng.");
+        }
+
+        const now = PP_UTILS.now();
+        const time = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+        const currentUser = window.PP_DATA.getCurrentUser();
+        const actorName = currentUser ? currentUser.name : "Tài xế";
+
+        targetStop.status = "completed";
+        targetStop.actualDeliveryTime = time;
+        targetStop.deliveredAt = now;
+        targetStop.pod = {
+          receiverName: receiverName,
+          otpVerified: true,
+          imageName: String(file.name || "").slice(0, 120),
+          imageType: file.type,
+          imageSize: file.size,
+          codCollected: cod,
+          confirmedAt: now,
+          confirmedBy: actorName
+        };
+        window.PP_DATA.saveStops(stops);
+
+        const parcels = window.PP_DATA.getParcels();
+        const parcelIndex = parcels.findIndex(parcel =>
+          String(parcel.trackingNumber || "").toUpperCase() === String(tracking).toUpperCase() ||
+          String(parcel.id || "").toUpperCase() === String(tracking).toUpperCase()
+        );
+        if (parcelIndex === -1) {
+          throw new Error("Không tìm thấy bưu kiện tương ứng để cập nhật trạng thái.");
+        }
+
+        parcels[parcelIndex].status = "delivered";
+        parcels[parcelIndex].statusLabel = "Giao thành công";
+        parcels[parcelIndex].deliveredAt = now;
+        window.PP_DATA.saveParcels(parcels);
+
+        const trackingEvents = window.PP_DATA.getTrackingEvents();
+        if (!Array.isArray(trackingEvents[tracking])) {
+          trackingEvents[tracking] = [];
+        }
+        trackingEvents[tracking].push({
+          time: now,
+          location: targetStop.address || (currentParcel && currentParcel.deliveryAddress) || "Địa chỉ người nhận",
+          status: "Giao hàng thành công",
+          description: `${receiverName} đã ký nhận bưu kiện. Biên bản e-POD ghi nhận ảnh ${file.name || "hiện trường"}.`,
+          type: "delivered"
+        });
+        window.PP_DATA.saveTrackingEvents(trackingEvents);
+
+        const exceptions = window.PP_DATA.getExceptions();
+        let exceptionChanged = false;
+        exceptions.forEach(exception => {
+          const sameParcel = String(exception.trackingNumber || "").toUpperCase() === String(tracking).toUpperCase() ||
+            String(exception.parcelId || "").toUpperCase() === String(tracking).toUpperCase();
+          if (sameParcel && ["open", "resolving"].includes(exception.status)) {
+            exception.status = "resolved";
+            exception.statusLabel = "Đã giải quyết";
+            exception.resolvedAt = now;
+            exception.resolutionAction = "delivered_on_retry";
+            exception.resolutionNote = `Giao thành công tại hiện trường, e-POD xác nhận bởi ${receiverName}.`;
+            exceptionChanged = true;
+          }
+        });
+        if (exceptionChanged) {
+          window.PP_DATA.saveExceptions(exceptions);
+        }
+
+        logAuditTrail(
+          "CONFIRM_DELIVERY",
+          targetStop.id,
+          `Xác nhận e-POD cho ${tracking}: người nhận ${receiverName}, COD ${formatVND(cod)}, ảnh ${file.name || "hiện trường"}`
+        );
+
+        closeModal("modal-pod");
+        resetPodPreview("Chưa chọn ảnh xác thực.");
+        showToast(`Đã ghi nhận e-POD cho ${tracking}. Đang quay lại lộ trình...`, "success");
+
+        window.setTimeout(() => {
+          window.location.href = "driver-route-stops.html";
+        }, 1200);
+      } catch (error) {
+        console.error("Không thể xác nhận giao hàng:", error);
+        showToast(error.message || "Không thể lưu biên bản e-POD. Vui lòng thử lại.", "danger");
+      } finally {
+        podSubmitting = false;
+        submitButton.disabled = false;
+        submitButton.textContent = submitLabel;
+      }
+    }
+
+    function callCustomer() {
+      const phone = currentStop ? (currentStop.recipientPhone || (currentParcel && currentParcel.recipientPhone)) : "";
+      if (!phone) {
+        showToast("Chưa có số điện thoại của người nhận để gọi.", "warning");
+        return;
+      }
+      showToast(`Đang kết nối cuộc gọi thoại đến ${phone}...`, "info");
+    }
+
+    function openMapNavigation() {
+      const address = currentStop ? (currentStop.address || (currentParcel && currentParcel.deliveryAddress)) : "";
+      if (!address) {
+        showToast("Chưa có địa chỉ để mở bản đồ chỉ đường.", "warning");
+        return;
+      }
+      showToast(`Đang khởi chạy bản đồ dẫn đường tới: ${address}`, "info");
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, "_blank", "noopener,noreferrer");
+    }
+
+    function goToCreateException() {
+      if (!currentStop || !currentStop.parcelId) {
+        showToast("Chưa chọn được bưu kiện để báo ngoại lệ.", "warning");
+        return;
+      }
+      if (currentStop.status === "completed") {
+        showToast("Điểm dừng đã giao thành công, không thể tạo ngoại lệ giao hàng mới.", "info");
+        return;
+      }
+      window.location.href = `driver-exception-create.html?parcelId=${encodeURIComponent(currentStop.parcelId)}`;
+    }
+  </script>
+</body>
+</html>

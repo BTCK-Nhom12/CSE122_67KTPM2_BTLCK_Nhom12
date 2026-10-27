@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Báo Cáo Ngoại Lệ - ParcelPulse Tài Xế</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-container">
+      <a href="../index.html" class="brand-logo">🚚</a>
+      <div class="brand-title">
+        ParcelPulse
+        <span>Nhân Viên Giao Hàng</span>
+      </div>
+    </div>
+
+    <button type="button" class="menu-toggle" aria-label="Mở menu điều hướng" aria-expanded="false" aria-controls="main-nav">☰</button>
+
+    <nav class="main-nav" aria-label="Điều hướng chính">
+      <ul class="nav-links" id="main-nav">
+      <li><a href="driver-route-stops.html" class="nav-link">📋 Danh Sách Điểm Dừng</a></li>
+      <li><a href="driver-stop-detail.html" class="nav-link">📦 Chi Tiết Điểm Dừng</a></li>
+      <li><a href="driver-exception-create.html" class="nav-link active" aria-current="page">⚠️ Báo Cáo Ngoại Lệ</a></li>
+      <li><a href="../index.html" class="nav-link">🔄 Đổi Vai Trò</a></li>
+    </ul>
+    </nav>
+
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline btn-sm" onclick="toggleTheme()" aria-label="Chuyển chế độ sáng tối" aria-pressed="false">🌓</button>
+      <div class="user-profile-badge" id="header-user-badge"></div>
+    </div>
+  </header>
+
+  <main class="app-container">
+
+    <div class="page-header">
+      <div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.35rem;">
+          <a href="driver-route-stops.html" style="color: var(--primary);">← Quay Lại Lộ Trình Tuyến</a>
+        </div>
+        <h1 class="page-title">⚠️ Tạo Báo Cáo Ngoại Lệ & Kích Hoạt AI Phân Loại</h1>
+        <p class="page-subtitle">Ghi nhận sự cố giao hàng, phân loại tự động bằng AI-1 và nhận gợi ý xử lý tức thì từ AI-3</p>
+      </div>
+    </div>
+
+    <div class="grid-cols-2">
+
+      <!-- Left Column: Form tạo ngoại lệ (C) + AI-1 Classifier -->
+      <div>
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h2 class="card-title">📝 Thông Tin Sự Cố Hiện Trường (C)</h2>
+            <span class="badge badge-exception">Ngoại lệ mới</span>
+          </div>
+
+          <form id="form-create-exception" onsubmit="handleCreateException(event)">
+            
+            <div class="form-group">
+              <label class="form-label" for="exc-parcel-id">Chọn Bưu Kiện Gặp Sự Cố <span class="required">*</span></label>
+              <select id="exc-parcel-id" class="form-control" required onchange="handleParcelChange(this.value)">
+                <!-- Loaded by JS -->
+              </select>
+            </div>
+
+            <!-- Ghi chú hiện trường + nút AI-1 Classifier -->
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                <label class="form-label" for="exc-description" style="margin-bottom: 0;">Mô Tả Chi Tiết Sự Cố Từ Tài Xế <span class="required">*</span></label>
+                <button type="button" class="btn btn-accent btn-sm" onclick="runExceptionClassifierAI()">
+                  🤖 AI-1 Phân Loại Tự Động
+                </button>
+              </div>
+              <textarea id="exc-description" class="form-control" placeholder="Mô tả sự cố thực tế. Ví dụ: 'Đã gọi điện 3 lần nhưng khách không nghe máy, nhà khóa cổng không có chuông'..." minlength="10" aria-describedby="exc-desc-help exc-desc-error" required>Đã gọi điện 3 lần vào lúc 10:15, 10:20, 10:25 không ai nghe máy. Có bấm chuông cửa nhưng không ai phản hồi.</textarea>
+              <div class="form-help" id="exc-desc-help">Hệ thống AI xử lý ngôn ngữ tự nhiên sẽ tự động đọc hiểu và phân loại danh mục lỗi (tối thiểu 10 ký tự).</div>
+              <div id="exc-desc-error" class="form-error" role="alert"></div>
+            </div>
+
+            <!-- AI-1 Exception Classifier Result Box -->
+            <div class="ai-container" id="ai1-container" style="display: none; margin: 1rem 0;">
+              <div class="ai-header">
+                <span class="ai-badge">
+                  <span class="sparkle">✨</span> AI-1: Exception Classifier
+                </span>
+                <span id="ai1-confidence" class="badge badge-delivered">Độ tin cậy: 94%</span>
+              </div>
+
+              <div id="ai1-loading" class="ai-processing" style="display: none;" role="status">
+                <div class="ai-spinner"></div>
+                <p style="font-size: 0.85rem; font-weight: 600;">Mô hình NLP đang phân tích ngữ nghĩa ghi chú...</p>
+              </div>
+
+              <div id="ai1-error" class="form-error" role="alert" style="margin-bottom: 0.5rem;"></div>
+
+              <div id="ai1-result-box" class="ai-result-box">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">DANH MỤC ĐƯỢC ĐỀ XUẤT</span>
+                    <h4 id="ai1-category-name" style="color: var(--primary); font-size: 1.15rem; font-weight: 800;">Khách Hàng Vắng Mặt</h4>
+                  </div>
+                </div>
+
+                <div class="ai-explanation">
+                  <strong>💡 Giải thích lý do:</strong>
+                  <p id="ai1-explanation-text" style="margin-top: 0.25rem;">Phát hiện từ khóa 'gọi điện', 'không nghe máy', 'chuông cửa'.</p>
+                </div>
+
+                <div class="ai-actions">
+                  <button type="button" class="btn btn-success btn-sm" id="ai1-accept-btn" onclick="applyAICategory()">✅ Chấp Nhận Phân Loại Này</button>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('ai1-container').style.display = 'none'">Tự Chọn Thủ Công</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Category Radio Options -->
+            <div class="form-group">
+              <label class="form-label" id="exc-category-label">Loại Ngoại Lệ Được Xác Nhận <span class="required">*</span></label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="exception-type-grid" role="radiogroup" aria-labelledby="exc-category-label">
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer;">
+                  <input type="radio" id="exc-cat-absent" name="exc-category" value="customer_absent" checked>
+                  <span style="font-size: 0.85rem;">👤 Khách vắng mặt</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer;">
+                  <input type="radio" id="exc-cat-address" name="exc-category" value="wrong_address">
+                  <span style="font-size: 0.85rem;">🏠 Sai / Không tìm thấy địa chỉ</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer;">
+                  <input type="radio" id="exc-cat-refused" name="exc-category" value="refused_delivery">
+                  <span style="font-size: 0.85rem;">❌ Khách từ chối nhận</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer;">
+                  <input type="radio" id="exc-cat-damaged" name="exc-category" value="damaged">
+                  <span style="font-size: 0.85rem;">📦 Hàng hỏng / móp méo</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer;">
+                  <input type="radio" id="exc-cat-weather" name="exc-category" value="weather_delay">
+                  <span style="font-size: 0.85rem;">🌧️ Thời tiết / Kẹt xe</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Upload Bằng Chứng -->
+            <div class="form-group">
+              <label class="form-label" for="exc-file">Ảnh Chụp Bằng Chứng Hiện Trường</label>
+              <input type="file" class="form-control" accept="image/*" id="exc-file" aria-describedby="exc-file-help">
+              <div class="form-help" id="exc-file-help">Bắt buộc khi báo hỏng hóc hoặc nhà khóa cổng.</div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+              <button type="reset" class="btn btn-outline">Nhập Lại</button>
+              <button type="submit" class="btn btn-danger">🚨 Gửi Báo Cáo Ngoại Lệ</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- AI-3: Next Best Action Card -->
+        <div class="card" id="ai3-card" style="background: var(--bg-surface); border: 2px dashed var(--accent);">
+          <div class="card-header">
+            <h2 class="card-title" style="color: var(--accent);">🎯 AI-3: Next Best Action (Gợi Ý Xử Lý)</h2>
+            <button class="btn btn-accent btn-sm" onclick="getAIBestAction()">Lấy Gợi Ý</button>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+            Dựa trên loại ngoại lệ và vị trí hiện tại, AI đề xuất hành động giảm thiểu chi phí chuyển hoàn.
+          </p>
+          <div id="ai3-action-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- Loaded by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Danh sách ngoại lệ hôm nay (R/D) -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">📋 Ngoại Lệ Đã Báo Cáo Hôm Nay (R/D)</h2>
+            <span class="badge badge-exception" id="exc-count-badge">0 ngoại lệ</span>
+          </div>
+
+          <div id="exceptions-list" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Loaded by JS -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>ParcelPulse - CSE122 Xử lý ngoại lệ giao hàng với sự hỗ trợ của Trí tuệ Nhân tạo</p>
+  </footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    let tempAICategory = "customer_absent";
+    let tempAIConfidence = "";
+    let tempAIRecommendedAction = "";
+    let tempAIUncertain = true;
+    let currentAiActions = [];
+
+    const CATEGORY_META = {
+      customer_absent: {
+        label: "Khách hàng vắng mặt",
+        severity: "high",
+        severityLabel: "Ưu tiên cao",
+        action: "Gửi SMS hẹn giao lại vào ca chiều hoặc chuyển tủ SmartLocker gần nhất."
+      },
+      wrong_address: {
+        label: "Sai địa chỉ / Không tìm thấy",
+        severity: "urgent",
+        severityLabel: "Khẩn cấp",
+        action: "Gửi link định vị GPS để người nhận ghim lại tọa độ chính xác."
+      },
+      refused_delivery: {
+        label: "Khách từ chối nhận",
+        severity: "urgent",
+        severityLabel: "Khẩn cấp",
+        action: "Ghi nhận lý do từ chối và thông báo về người gửi để xử lý chuyển hoàn."
+      },
+      damaged: {
+        label: "Hàng hỏng / móp méo",
+        severity: "urgent",
+        severityLabel: "Khẩn cấp",
+        action: "Chụp ảnh 4 góc bưu kiện, lập biên bản đồng kiểm và giữ hàng tại Hub."
+      },
+      weather_delay: {
+        label: "Thời tiết / Kẹt xe",
+        severity: "medium",
+        severityLabel: "Ưu tiên trung bình",
+        action: "Dời ETA thêm 45-60 phút và gửi thông báo cập nhật tới người nhận."
+      }
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      populateParcelDropdown();
+      renderExceptionsList();
+      getAIBestAction();
+      document.querySelectorAll('input[name="exc-category"]').forEach(radio => {
+        radio.addEventListener("change", getAIBestAction);
+      });
+    });
+
+    function populateParcelDropdown() {
+      const select = document.getElementById("exc-parcel-id");
+      const parcels = window.PP_DATA.getParcels();
+      const activeParcels = parcels.filter(p => p.status !== "delivered" && p.status !== "returned");
+      const list = activeParcels.length > 0 ? activeParcels : parcels;
+
+      select.innerHTML = list.map(p => `
+        <option value="${PP_UTILS.escapeHTML(p.trackingNumber)}">
+          ${PP_UTILS.escapeHTML(p.trackingNumber)} - ${PP_UTILS.escapeHTML(p.recipientName)} (${PP_UTILS.escapeHTML(p.deliveryAddress.substring(0, 35))}...)
+        </option>
+      `).join("");
+
+      // Query param support
+      const urlParams = new URLSearchParams(window.location.search);
+      const pid = urlParams.get("parcelId");
+      if (pid && list.some(p => p.trackingNumber === pid)) select.value = pid;
+    }
+
+    function handleParcelChange() {
+      getAIBestAction();
+    }
+
+    // AI-1 Exception Classifier Trigger
+    function runExceptionClassifierAI() {
+      const textEl = document.getElementById("exc-description");
+      const text = textEl.value.trim();
+      const container = document.getElementById("ai1-container");
+      const loading = document.getElementById("ai1-loading");
+      const resultBox = document.getElementById("ai1-result-box");
+      const errorEl = document.getElementById("ai1-error");
+      const acceptBtn = document.getElementById("ai1-accept-btn");
+
+      container.style.display = "block";
+      resultBox.style.display = "none";
+      errorEl.style.display = "none";
+
+      if (text.length < 10) {
+        loading.style.display = "none";
+        errorEl.textContent = "Mô tả quá ngắn. Vui lòng nhập ít nhất 10 ký tự để AI có đủ dữ kiện phân tích.";
+        errorEl.style.display = "block";
+        textEl.setAttribute("aria-invalid", "true");
+        textEl.focus();
+        return;
+      }
+
+      textEl.removeAttribute("aria-invalid");
+      loading.style.display = "block";
+      acceptBtn.style.display = "inline-flex";
+
+      PP_AI.classifyException(text, (res) => {
+        loading.style.display = "none";
+
+        if (!res) {
+          errorEl.textContent = "AI chưa thể phân tích nội dung này. Vui lòng bổ sung mô tả rồi thử lại.";
+          errorEl.style.display = "block";
+          return;
+        }
+
+        tempAICategory = res.category;
+        tempAIConfidence = res.confidence;
+        tempAIRecommendedAction = res.recommendedAction || "";
+        tempAIUncertain = Boolean(res.uncertain);
+
+        document.getElementById("ai1-category-name").textContent = res.categoryName;
+        document.getElementById("ai1-confidence").textContent = `Độ tin cậy: ${res.confidence}`;
+        document.getElementById("ai1-explanation-text").textContent = res.explanation;
+        document.getElementById("ai1-confidence").className = `badge ${res.uncertain ? "badge-exception" : "badge-delivered"}`;
+        resultBox.style.display = "block";
+
+        if (res.uncertain) {
+          acceptBtn.style.display = "none";
+          errorEl.textContent = "AI không đủ căn cứ để kết luận. Vui lòng tự chọn loại ngoại lệ bên dưới hoặc bổ sung mô tả.";
+          errorEl.style.display = "block";
+        } else {
+          acceptBtn.style.display = "inline-flex";
+          errorEl.style.display = "none";
+        }
+      });
+    }
+
+    function applyAICategory() {
+      if (!tempAICategory || tempAICategory === "unknown" || tempAIUncertain) {
+        showToast("AI chưa đủ dữ kiện. Vui lòng tự chọn loại ngoại lệ.", "warning");
+        return;
+      }
+
+      const radio = document.querySelector(`input[name="exc-category"][value="${tempAICategory}"]`);
+      if (!radio) return;
+
+      radio.checked = true;
+      const meta = CATEGORY_META[tempAICategory];
+      showToast(`Đã áp dụng danh mục AI: ${meta ? meta.label : tempAICategory}`, "success");
+      document.getElementById("ai1-container").style.display = "none";
+      getAIBestAction();
+    }
+
+    // AI-3 Next Best Action Trigger
+    function getAIBestAction() {
+      const selectedRadio = document.querySelector('input[name="exc-category"]:checked');
+      const cat = selectedRadio ? selectedRadio.value : "customer_absent";
+      const listEl = document.getElementById("ai3-action-list");
+
+      listEl.setAttribute("aria-busy", "true");
+      listEl.innerHTML = `<div class="ai-spinner" style="width: 24px; height: 24px; margin: 0.5rem auto;"></div>`;
+
+      PP_AI.suggestNextAction(cat, (actions, isFallback) => {
+        currentAiActions = actions;
+        listEl.setAttribute("aria-busy", "false");
+
+        const fallbackNote = isFallback
+          ? `<div style="font-size: 0.8rem; background: var(--danger-light); color: var(--danger); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); margin-bottom: 0.5rem;">
+              AI chưa có mẫu gợi ý riêng cho loại ngoại lệ này. Dưới đây là phương án mặc định, điều phối viên cần xác minh thủ công.
+            </div>`
+          : "";
+
+        const actionItems = actions.map((act, index) => `
+          <div style="background: var(--bg-main); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <strong style="font-size: 0.9rem;">${PP_UTILS.escapeHTML(act.title)}</strong>
+                <span class="badge badge-in_transit" style="font-size: 0.7rem;">Điểm phù hợp: ${PP_UTILS.escapeHTML(act.score)}</span>
+                ${act.recommended ? `<span class="badge badge-delivered" style="font-size: 0.7rem;">Khuyên dùng</span>` : ""}
+              </div>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">${PP_UTILS.escapeHTML(act.desc)}</p>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="applyNextAction(${index})">Thực Hiện</button>
+          </div>
+        `).join("");
+
+        listEl.innerHTML = fallbackNote + actionItems;
+      });
+    }
+
+    function applyNextAction(index) {
+      const action = currentAiActions[index];
+      if (!action) return;
+      showToast(`Đã kích hoạt hành động: "${action.title}"`, "success");
+      logAuditTrail("AI_ACTION_ACCEPTED", "AI-3", `Tài xế áp dụng gợi ý: ${action.title}`);
+    }
+
+    // Render Exceptions List (R)
+    function renderExceptionsList() {
+      const listEl = document.getElementById("exceptions-list");
+      const exceptions = window.PP_DATA.getExceptions()
+        .slice()
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      document.getElementById("exc-count-badge").textContent = `${exceptions.length} ngoại lệ`;
+
+      if (exceptions.length === 0) {
+        listEl.innerHTML = `
+          <div class="state-empty" style="padding: 2rem 0;">
+            <div class="state-empty-icon">✅</div>
+            <p>Hôm nay chưa có ngoại lệ nào phát sinh.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = exceptions.map(exc => `
+        <div class="card" style="padding: 1rem; background: var(--bg-main); border: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+            <div>
+              <strong style="color: var(--danger);">${PP_UTILS.escapeHTML(exc.trackingNumber)}</strong>
+              <span class="badge badge-exception" style="margin-left: 0.5rem;">${PP_UTILS.escapeHTML(exc.exceptionTypeLabel)}</span>
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">${PP_UTILS.escapeHTML(exc.createdAt)}</span>
+          </div>
+
+          <p style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 0.5rem;">
+            <strong>Mô tả:</strong> ${PP_UTILS.escapeHTML(exc.description)}
+          </p>
+
+          <div style="font-size: 0.8rem; background: var(--bg-surface); padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 0.5rem;">
+            <strong>Gợi ý AI:</strong> ${PP_UTILS.escapeHTML(exc.suggestedAction)}
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+            <span class="badge badge-${exc.status === 'resolved' ? 'delivered' : 'pending'}">${PP_UTILS.escapeHTML(exc.statusLabel)}</span>
+            <button class="btn btn-outline btn-sm" style="color: var(--danger);" onclick="deleteException('${PP_UTILS.escapeHTML(exc.id)}')">🗑️ Hủy Báo Cáo (D)</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // Handle Exception Submit (C)
+    function handleCreateException(e) {
+      e.preventDefault();
+      const parcelId = document.getElementById("exc-parcel-id").value;
+      const descEl = document.getElementById("exc-description");
+      const desc = descEl.value.trim();
+      const selectedRadio = document.querySelector('input[name="exc-category"]:checked');
+      const cat = selectedRadio ? selectedRadio.value : "";
+      const errorEl = document.getElementById("exc-desc-error");
+      const fileInput = document.getElementById("exc-file");
+
+      if (!parcelId) {
+        showToast("Vui lòng chọn bưu kiện gặp sự cố.", "warning");
+        return;
+      }
+
+      if (desc.length < 10) {
+        errorEl.textContent = "Vui lòng mô tả sự cố chi tiết tối thiểu 10 ký tự.";
+        errorEl.style.display = "block";
+        descEl.setAttribute("aria-invalid", "true");
+        descEl.focus();
+        return;
+      }
+
+      if (!cat) {
+        showToast("Vui lòng chọn loại ngoại lệ được xác nhận.", "warning");
+        return;
+      }
+
+      if (cat === "damaged" && (!fileInput.files || fileInput.files.length === 0)) {
+        errorEl.textContent = "Báo hỏng hóc bắt buộc phải đính kèm ảnh chụp bằng chứng hiện trường.";
+        errorEl.style.display = "block";
+        fileInput.focus();
+        return;
+      }
+
+      errorEl.style.display = "none";
+      descEl.removeAttribute("aria-invalid");
+
+      let exceptions = window.PP_DATA.getExceptions();
+      const duplicate = exceptions.find(exc => exc.trackingNumber === parcelId && exc.status !== "resolved");
+      if (duplicate) {
+        showToast("Bưu kiện này đã có báo cáo ngoại lệ đang mở. Vui lòng chờ điều phối viên xử lý.", "warning");
+        return;
+      }
+
+      const parcels = window.PP_DATA.getParcels();
+      const parcel = parcels.find(p => p.trackingNumber === parcelId);
+      if (!parcel) {
+        showToast("Không tìm thấy bưu kiện đã chọn. Vui lòng tải lại trang.", "danger");
+        return;
+      }
+
+      const currentUser = window.PP_DATA.getCurrentUser();
+      const meta = CATEGORY_META[cat];
+      const isAiMatch = tempAICategory === cat && !tempAIUncertain;
+      const now = PP_UTILS.now();
+
+      const newExc = {
+        id: PP_UTILS.uid("EXC"),
+        parcelId: parcelId,
+        trackingNumber: parcelId,
+        recipientName: parcel.recipientName,
+        recipientPhone: parcel.recipientPhone,
+        driverId: currentUser && currentUser.role === "driver" ? currentUser.id : parcel.driverId,
+        driverName: currentUser && currentUser.role === "driver" ? currentUser.name : (parcel.driverName || "Chưa phân công"),
+        exceptionType: cat,
+        exceptionTypeLabel: meta.label,
+        severity: meta.severity,
+        severityLabel: meta.severityLabel,
+        description: desc,
+        evidenceImages: ["https://images.unsplash.com/photo-1513694203232-719a280e022f?w=300&auto=format&fit=crop&q=80"],
+        attemptCount: 1,
+        status: "open",
+        statusLabel: "Chờ xử lý",
+        suggestedAction: isAiMatch && tempAIRecommendedAction ? tempAIRecommendedAction : meta.action,
+        aiConfidence: isAiMatch ? tempAIConfidence : "Chưa xác định",
+        aiCategory: cat,
+        createdAt: now
+      };
+
+      exceptions.unshift(newExc);
+      window.PP_DATA.saveExceptions(exceptions);
+
+      // Update parcel status to exception
+      const pIdx = parcels.findIndex(p => p.trackingNumber === parcelId);
+      if (pIdx !== -1) {
+        parcels[pIdx].status = "exception";
+        parcels[pIdx].statusLabel = "Có ngoại lệ";
+        window.PP_DATA.saveParcels(parcels);
+      }
+
+      const allEvents = window.PP_DATA.getTrackingEvents();
+      if (!allEvents[parcelId]) allEvents[parcelId] = [];
+      allEvents[parcelId].push({
+        time: now,
+        location: "Hiện trường giao hàng",
+        status: "Phát sinh ngoại lệ",
+        description: `${meta.label}: ${desc}`,
+        type: "exception"
+      });
+      window.PP_DATA.saveTrackingEvents(allEvents);
+      logAuditTrail("CREATE_EXCEPTION", newExc.id, `Tạo báo cáo ${meta.label} cho ${parcelId}`);
+
+      showToast("Đã gửi báo cáo ngoại lệ tới bàn Điều phối viên!", "success");
+
+      document.getElementById("form-create-exception").reset();
+      descEl.value = "";
+      document.getElementById("ai1-container").style.display = "none";
+      errorEl.style.display = "none";
+      document.getElementById("ai1-error").style.display = "none";
+      tempAICategory = "customer_absent";
+      tempAIConfidence = "";
+      tempAIRecommendedAction = "";
+      tempAIUncertain = true;
+
+      renderExceptionsList();
+      getAIBestAction();
+    }
+
+    function deleteException(id) {
+      if (confirm("Bạn có chắc chắn muốn hủy báo cáo ngoại lệ này?")) {
+        let exceptions = window.PP_DATA.getExceptions();
+        const target = exceptions.find(e => e.id === id);
+        exceptions = exceptions.filter(e => e.id !== id);
+        window.PP_DATA.saveExceptions(exceptions);
+        if (target) {
+          logAuditTrail("DELETE_EXCEPTION", target.id, `Hủy báo cáo ngoại lệ của ${target.trackingNumber}`);
+        }
+        showToast("Đã hủy báo cáo ngoại lệ", "info");
+        renderExceptionsList();
+      }
+    }
+  </script>
+</body>
+</html>
