@@ -30,16 +30,9 @@
 
     .role-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 1.5rem;
       margin: 2.5rem 0;
-    }
-
-    .role-card .role-card-link::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: var(--radius-lg);
     }
 
     .role-card {
@@ -94,7 +87,7 @@
     </div>
 
     <div class="header-actions">
-      <button type="button" class="btn btn-outline btn-sm" onclick="toggleTheme()" aria-label="Chuyển chế độ sáng tối" aria-pressed="false">🌓 Giao diện</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleTheme()" title="Chuyển chế độ sáng/tối">🌓 Giao diện</button>
       <div class="user-profile-badge" id="header-user-badge">
         <!-- Tự động kết xuất bởi main.js -->
       </div>
@@ -133,7 +126,7 @@
 
       <div class="role-grid">
         <!-- Role 1: Người nhận -->
-        <div class="role-card">
+        <div class="role-card" onclick="switchUserRole('recipient')">
           <div>
             <div class="role-icon">👤</div>
             <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">Người Nhận Hàng</h3>
@@ -145,12 +138,12 @@
             </div>
           </div>
           <div style="margin-top: 1.5rem;">
-            <a href="pages/recipient-track-parcel.html" class="btn btn-primary role-card-link" onclick="setRoleContext('recipient')" style="width: 100%;">Truy Cập Màn Hình ➔</a>
+            <a href="pages/recipient-track-parcel.html" class="btn btn-primary" style="width: 100%;">Truy Cập Màn Hình ➔</a>
           </div>
         </div>
 
         <!-- Role 2: Tài xế -->
-        <div class="role-card">
+        <div class="role-card" onclick="switchUserRole('driver')">
           <div>
             <div class="role-icon">🚚</div>
             <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">Nhân Viên Giao Hàng</h3>
@@ -162,12 +155,12 @@
             </div>
           </div>
           <div style="margin-top: 1.5rem;">
-            <a href="pages/driver-route-stops.html" class="btn btn-primary role-card-link" onclick="setRoleContext('driver')" style="width: 100%;">Truy Cập Màn Hình ➔</a>
+            <a href="pages/driver-route-stops.html" class="btn btn-primary" style="width: 100%;">Truy Cập Màn Hình ➔</a>
           </div>
         </div>
 
         <!-- Role 3: Điều phối viên -->
-        <div class="role-card">
+        <div class="role-card" onclick="switchUserRole('dispatcher')">
           <div>
             <div class="role-icon">🎛️</div>
             <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">Điều Phối Viên</h3>
@@ -179,12 +172,12 @@
             </div>
           </div>
           <div style="margin-top: 1.5rem;">
-            <a href="pages/dispatcher-operations-dashboard.html" class="btn btn-primary role-card-link" onclick="setRoleContext('dispatcher')" style="width: 100%;">Truy Cập Màn Hình ➔</a>
+            <a href="pages/dispatcher-operations-dashboard.html" class="btn btn-primary" style="width: 100%;">Truy Cập Màn Hình ➔</a>
           </div>
         </div>
 
         <!-- Role 4: Quản trị viên -->
-        <div class="role-card">
+        <div class="role-card" onclick="switchUserRole('admin')">
           <div>
             <div class="role-icon">🛡️</div>
             <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">Quản Trị Viên</h3>
@@ -196,7 +189,7 @@
             </div>
           </div>
           <div style="margin-top: 1.5rem;">
-            <a href="pages/admin-status-management.html" class="btn btn-primary role-card-link" onclick="setRoleContext('admin')" style="width: 100%;">Truy Cập Màn Hình ➔</a>
+            <a href="pages/admin-status-management.html" class="btn btn-primary" style="width: 100%;">Truy Cập Màn Hình ➔</a>
           </div>
         </div>
       </div>
@@ -205,7 +198,7 @@
     <!-- Quick Demo Box -->
     <section class="card" style="margin-top: 2rem;">
       <div class="card-header">
-        <h2 class="card-title">✨ 3 Tính Năng AI Trọng Tâm Được Tích Hợp</h2>
+        <h3 class="card-title">✨ 3 Tính Năng AI Trọng Tâm Được Tích Hợp</h3>
         <span class="badge badge-in_transit">Nguyên Tắc Trải Nghiệm Frontend AI (Mục 11 & 12)</span>
       </div>
       <div class="grid-cols-3" style="margin-bottom: 0;">
@@ -270,7 +263,7 @@
 
   <!-- Footer -->
   <footer class="app-footer">
-    <p><strong>ParcelPulse</strong> - Đề tài BTL-12 Học phần CSE122 Phát triển ứng dụng Web cơ bản</p>
+    <p><strong>ParcelPulse</strong> – Đề tài BTL-12 Học phần CSE122 Phát triển ứng dụng Web cơ bản</p>
     <p style="margin-top: 0.25rem;">Xây dựng hoàn chỉnh với HTML5 ngữ nghĩa, CSS3 hiện đại, Vanilla JavaScript DOM & LocalStorage.</p>
   </footer>
 
