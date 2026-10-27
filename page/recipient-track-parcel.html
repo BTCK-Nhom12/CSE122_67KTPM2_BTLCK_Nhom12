@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theo Dõi Vận Đơn - ParcelPulse</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-container">
+      <a href="../index.html" class="brand-logo">📦</a>
+      <div class="brand-title">
+        ParcelPulse
+        <span>Người Nhận Hàng</span>
+      </div>
+    </div>
+
+    <button class="menu-toggle">☰</button>
+
+    <ul class="nav-links">
+      <li><a href="recipient-track-parcel.html" class="nav-link active">🔍 Theo Dõi Kiện Hàng</a></li>
+      <li><a href="recipient-delivery-preferences.html" class="nav-link">⚙️ Tùy Chọn Giao</a></li>
+      <li><a href="recipient-delivery-feedback.html" class="nav-link">⭐ Đánh Giá Đơn</a></li>
+      <li><a href="../index.html" class="nav-link">🔄 Đổi Vai Trò</a></li>
+    </ul>
+
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" onclick="toggleTheme()">🌓</button>
+      <div class="user-profile-badge" id="header-user-badge"></div>
+    </div>
+  </header>
+
+  <!-- Container -->
+  <main class="app-container">
+
+    <!-- Page Title -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">🔍 Tra Cứu & Theo Dõi Hành Trình Bưu Kiện</h1>
+        <p class="page-subtitle">Xem trạng thái cập nhật thời gian thực, sự cố phát sinh và phân tích ETA từ mô hình AI</p>
+      </div>
+    </div>
+
+    <!-- Search Box -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <div class="search-wrapper" style="flex: 1; min-width: 280px;">
+          <span class="search-icon">🔎</span>
+          <input type="text" id="tracking-input" class="form-control" placeholder="Nhập mã vận đơn, VD: PP-2024-00123 hoặc PP-2024-00124" value="PP-2024-00124">
+        </div>
+        <button class="btn btn-primary" onclick="searchParcel()">Tra Cứu Vận Đơn</button>
+        <button class="btn btn-outline" onclick="loadSample('PP-2024-00123')">Mẫu: Bình thường</button>
+        <button class="btn btn-outline" onclick="loadSample('PP-2024-00124')">Mẫu: Có Ngoại Lệ</button>
+        <button class="btn btn-outline" onclick="loadSample('PP-2024-00125')">Mẫu: Đã Giao</button>
+      </div>
+      <div id="search-error" class="form-error" style="margin-top: 0.5rem;">Vui lòng nhập đúng mã vận đơn theo định dạng PP-2024-XXXXX</div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="state-loading" style="display: none;">
+      <div class="ai-spinner"></div>
+      <p style="font-weight: 600;">Đang kết nối hệ thống viễn thông và truy xuất dữ liệu bưu kiện...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="card state-empty" style="display: none;">
+      <div class="state-empty-icon">📭</div>
+      <h3>Không Tìm Thấy Thông Tin Bưu Kiện</h3>
+      <p>Mã vận đơn không tồn tại hoặc chưa được đồng bộ từ người gửi. Vui lòng kiểm tra lại.</p>
+    </div>
+
+    <!-- Main Result Content -->
+    <div id="result-container" style="display: none;">
+      
+      <!-- Exception Warning Banner if any -->
+      <div id="exception-banner" class="card" style="display: none; background: var(--danger-light); border-color: rgba(239, 68, 68, 0.4); margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; gap: 0.75rem;">
+            <span style="font-size: 1.75rem;">⚠️</span>
+            <div>
+              <h3 style="color: var(--danger); font-size: 1.1rem; font-weight: 700;">Đơn Hàng Gặp Ngoại Lệ Cần Bạn Hỗ Trợ</h3>
+              <p id="exception-banner-desc" style="font-size: 0.9rem; color: #7F1D1D; margin-top: 0.25rem;">
+                Tài xế không thể liên lạc hoặc chưa tìm được số nhà chính xác.
+              </p>
+            </div>
+          </div>
+          <a href="recipient-delivery-preferences.html" class="btn btn-accent btn-sm">🛠️ Cập Nhật Tùy Chọn & Chỉ Đường</a>
+        </div>
+      </div>
+
+      <div class="grid-cols-2">
+        
+        <!-- Left Column: Parcel Info & AI-2 ETA Explainability -->
+        <div>
+          <!-- Parcel Overview Card -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card-header">
+              <h3 class="card-title">📦 Thông Tin Bưu Kiện</h3>
+              <span id="parcel-status-badge"></span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+              <div>
+                <span style="color: var(--text-muted); display: block; font-size: 0.8rem;">MÃ VẬN ĐƠN</span>
+                <strong id="info-tracking-id" style="font-size: 1.1rem; color: var(--primary);"></strong>
+              </div>
+              <div>
+                <span style="color: var(--text-muted); display: block; font-size: 0.8rem;">DỰ KIẾN GIAO BAN ĐẦU</span>
+                <strong id="info-eta"></strong>
+              </div>
+              <div>
+                <span style="color: var(--text-muted); display: block; font-size: 0.8rem;">NGƯỜI GỬI</span>
+                <span id="info-sender"></span>
+              </div>
+              <div>
+                <span style="color: var(--text-muted); display: block; font-size: 0.8rem;">TIỀN THU HỘ (COD)</span>
+                <strong id="info-cod" style="color: var(--accent);"></strong>
+              </div>
+            </div>
+
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); font-size: 0.9rem;">
+              <span style="color: var(--text-muted); display: block; font-size: 0.8rem;">ĐỊA CHỈ NHẬN HÀNG</span>
+              <p id="info-address" style="font-weight: 600; margin-top: 0.25rem;"></p>
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; background: var(--bg-subtle); padding: 0.75rem 1rem; border-radius: var(--radius-md);">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.25rem;">🚚</span>
+                <div>
+                  <div id="info-driver" style="font-weight: 700; font-size: 0.85rem;">Tài xế đang giao</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">Đội xe ParcelPulse Express</div>
+                </div>
+              </div>
+              <button class="btn btn-outline btn-sm" onclick="showToast('Đang kết nối cuộc gọi bảo mật đến tài xế...', 'info')">📞 Gọi Tài Xế</button>
+            </div>
+          </div>
+
+          <!-- FEATURE AI-2: ETA EXPLAINABILITY (Chuẩn Mục 11 & 12) -->
+          <div class="ai-container">
+            <div class="ai-header">
+              <span class="ai-badge">
+                <span class="sparkle">✨</span> AI-2: ETA Explainability
+              </span>
+              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Mô hình dự báo thời gian thực</span>
+            </div>
+
+            <p style="font-size: 0.875rem; color: var(--text-muted);">
+              Sử dụng mạng nơ-ron kết hợp dữ liệu giao thông thực tế, khí tượng và tiến độ chặng cuối để bóc tách yếu tố ảnh hưởng đến giờ giao.
+            </p>
+
+            <div style="margin-top: 1rem;">
+              <button id="btn-run-ai2" class="btn btn-accent btn-sm" onclick="runAIEtaAnalysis()">
+                ⚡ Phân Tích & Giải Thích ETA Với AI
+              </button>
+            </div>
+
+            <!-- AI Processing state -->
+            <div id="ai2-loading" class="ai-processing">
+              <div class="ai-spinner"></div>
+              <p style="font-size: 0.85rem; font-weight: 600;">AI đang tính toán lưu lượng giao thông và tọa độ phương tiện...</p>
+            </div>
+
+            <!-- AI Result Box -->
+            <div id="ai2-result" class="ai-result-box">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <div>
+                  <span style="font-size: 0.8rem; color: var(--text-muted);">GIỜ GIAO CHÍNH XÁC ĐÃ ĐIỀU CHỈNH</span>
+                  <h3 id="ai2-new-eta" style="font-size: 1.35rem; color: var(--accent); font-weight: 800;">15:40 Hôm Nay</h3>
+                </div>
+                <div style="text-align: right;">
+                  <span class="badge" style="background: var(--success-light); color: var(--success);">Độ tin cậy: 95.4%</span>
+                </div>
+              </div>
+
+              <div class="ai-explanation">
+                <strong>💡 Vì sao có kết quả này?</strong>
+                <p id="ai2-summary" style="margin-top: 0.25rem;">Tuyến đường Đỗ Đức Dục - Mễ Trì đang có mật độ phương tiện đông đúc, tuy nhiên tài xế đang đi trước tiến độ 2 đơn.</p>
+              </div>
+
+              <div id="ai2-factors-list" style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+                <!-- Render factors -->
+              </div>
+
+              <!-- Quyền kiểm soát của người dùng (Mục 12) -->
+              <div class="ai-actions">
+                <button class="btn btn-success btn-sm" onclick="acceptEtaAI()">✅ Chấp Nhận Khung Giờ Này</button>
+                <a href="recipient-delivery-preferences.html" class="btn btn-outline btn-sm">✏️ Tôi Muốn Dời Giờ Khác</a>
+                <button class="btn btn-outline btn-sm" onclick="rejectEtaAI()">Bỏ Qua</button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Right Column: Timeline Tracking Events -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📍 Lịch Sử Di Chuyển & Trạng Thái</h3>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Cập nhật từ thiết bị GPS</span>
+            </div>
+
+            <div class="timeline" id="tracking-timeline">
+              <!-- Render by JS -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>ParcelPulse - CSE122 Hệ thống theo dõi & xử lý ngoại lệ giao hàng chặng cuối</p>
+  </footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/main.js"></script>
+  <script>
+    let currentParcel = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Tự động load đơn mẫu đầu tiên
+      searchParcel();
+    });
+
+    function loadSample(code) {
+      document.getElementById("tracking-input").value = code;
+      searchParcel();
+    }
+
+    function searchParcel() {
+      const code = document.getElementById("tracking-input").value.trim().toUpperCase();
+      const errEl = document.getElementById("search-error");
+      const loadingEl = document.getElementById("loading-state");
+      const emptyEl = document.getElementById("empty-state");
+      const resultEl = document.getElementById("result-container");
+
+      if (!code) {
+        errEl.style.display = "block";
+        return;
+      }
+      errEl.style.display = "none";
+
+      // Bật trạng thái đang tải
+      loadingEl.style.display = "flex";
+      emptyEl.style.display = "none";
+      resultEl.style.display = "none";
+
+      setTimeout(() => {
+        loadingEl.style.display = "none";
+        const parcels = window.PP_DATA.getParcels();
+        const found = parcels.find(p => p.trackingNumber === code || p.id === code);
+
+        if (!found) {
+          emptyEl.style.display = "block";
+          return;
+        }
+
+        currentParcel = found;
+        renderParcelDetails(found);
+        resultEl.style.display = "block";
+      }, 600);
+    }
+
+    function renderParcelDetails(parcel) {
+      document.getElementById("info-tracking-id").textContent = parcel.trackingNumber;
+      document.getElementById("info-eta").textContent = parcel.estimatedDelivery;
+      document.getElementById("info-sender").textContent = parcel.senderName;
+      document.getElementById("info-cod").textContent = formatVND(parcel.codAmount);
+      document.getElementById("info-address").textContent = parcel.deliveryAddress;
+      document.getElementById("info-driver").textContent = parcel.driverName ? `Tài xế: ${parcel.driverName}` : "Đang phân bổ tài xế";
+
+      document.getElementById("parcel-status-badge").innerHTML = getStatusBadge(parcel.status, parcel.statusLabel);
+
+      // Exception banner check
+      const banner = document.getElementById("exception-banner");
+      if (parcel.status === "exception") {
+        banner.style.display = "block";
+      } else {
+        banner.style.display = "none";
+      }
+
+      // Reset AI box
+      document.getElementById("ai2-result").style.display = "none";
+      document.getElementById("btn-run-ai2").style.display = "inline-flex";
+
+      // Render Timeline
+      const allEvents = window.PP_DATA.getTrackingEvents();
+      const events = allEvents[parcel.trackingNumber] || [
+        { time: parcel.createdAt, location: "Trung tâm tiếp nhận", status: "Đã tạo đơn hàng", description: "Hệ thống ghi nhận bưu kiện mới", type: "create" }
+      ];
+
+      const timelineEl = document.getElementById("tracking-timeline");
+      timelineEl.innerHTML = events.map((ev, index) => {
+        const isLatest = index === events.length - 1;
+        let itemClass = isLatest ? "active" : "done";
+        if (ev.type === "exception") itemClass = "exception";
+
+        return `
+          <div class="timeline-item ${itemClass}">
+            <div class="timeline-marker">${index + 1}</div>
+            <div class="timeline-content">
+              <span class="timeline-time">${ev.time} • ${ev.location}</span>
+              <h4 class="timeline-title">${ev.status}</h4>
+              <p class="timeline-desc">${ev.description}</p>
+            </div>
+          </div>
+        `;
+      }).reverse().join("");
+    }
+
+    // AI-2 Handler
+    function runAIEtaAnalysis() {
+      const btn = document.getElementById("btn-run-ai2");
+      const loading = document.getElementById("ai2-loading");
+      const resultBox = document.getElementById("ai2-result");
+
+      btn.style.display = "none";
+      loading.style.display = "block";
+
+      PP_AI.explainETA(currentParcel ? currentParcel.id : "PP-2024-00124", (data) => {
+        loading.style.display = "none";
+        resultBox.style.display = "block";
+
+        document.getElementById("ai2-new-eta").textContent = data.adjustedETA;
+        document.getElementById("ai2-summary").textContent = data.summary;
+
+        const factorsList = document.getElementById("ai2-factors-list");
+        factorsList.innerHTML = data.factors.map(f => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.6rem; background: var(--bg-main); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+            <div>
+              <strong>${f.name}:</strong> <span style="color: var(--text-muted);">${f.detail}</span>
+            </div>
+            <span class="badge badge-${f.status}">${f.impact}</span>
+          </div>
+        `).join("");
+      });
+    }
+
+    function acceptEtaAI() {
+      showToast("Đã xác nhận khung giờ giao hàng mới với hệ thống điều phối!", "success");
+      document.getElementById("ai2-result").style.border = "2px solid var(--success)";
+    }
+
+    function rejectEtaAI() {
+      showToast("Đã giữ nguyên thông tin ban đầu của đơn hàng.", "info");
+      document.getElementById("ai2-result").style.display = "none";
+      document.getElementById("btn-run-ai2").style.display = "inline-flex";
+    }
+  </script>
+</body>
+</html>
